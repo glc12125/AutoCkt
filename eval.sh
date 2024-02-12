@@ -1,0 +1,1 @@
+run autockt/rollout.py C:\Users\Administrator\ray_results\train_45nm_ngspice\PPO_TwoStageAmp_0_2024-02-07_15-11-48_kq9cq_l\checkpoint_1034\checkpoint-1034 --run PPO --env opamp-v0 --num_val_specs 1000 --traj_len 50 --no-render

@@ -57,8 +57,8 @@ class OrderedDictYAMLLoader(yaml.Loader):
 class TwoStageAmp(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    PERF_LOW = -1
-    PERF_HIGH = 0
+    PERF_LOW = -1.
+    PERF_HIGH = 1.
 
     #obtains yaml file
     path = os.getcwd()
@@ -107,9 +107,12 @@ class TwoStageAmp(gym.Env):
         self.action_meaning = [-1,0,2] 
         self.action_space = spaces.Tuple([spaces.Discrete(len(self.action_meaning))]*len(self.params_id))
         #self.action_space = spaces.Discrete(len(self.action_meaning)**len(self.params_id))
+        #self.observation_space = spaces.Box(
+        #    low=np.array([TwoStageAmp.PERF_LOW]*2*len(self.specs_id)+len(self.params_id)*[1]),
+        #    high=np.array([TwoStageAmp.PERF_HIGH]*2*len(self.specs_id)+len(self.params_id)*[100]))
         self.observation_space = spaces.Box(
-            low=np.array([TwoStageAmp.PERF_LOW]*2*len(self.specs_id)+len(self.params_id)*[1]),
-            high=np.array([TwoStageAmp.PERF_HIGH]*2*len(self.specs_id)+len(self.params_id)*[1]))
+            low=np.array(np.float64([TwoStageAmp.PERF_LOW]*2*len(self.specs_id)+len(self.params_id)*[0])),
+            high=np.array(np.float64([TwoStageAmp.PERF_HIGH]*2*len(self.specs_id)+len(self.params_id)*[100.])), dtype=np.float64)
 
         #initialize current param/spec observations
         self.cur_specs = np.zeros(len(self.specs_id), dtype=np.float32)
