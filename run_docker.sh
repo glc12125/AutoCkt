@@ -1,0 +1,1 @@
+bash ~/Development/bdi_dev/scripts/run_docker.sh glc12125/tensorflow:1.10.1-devel-gpu-py3 autockt
