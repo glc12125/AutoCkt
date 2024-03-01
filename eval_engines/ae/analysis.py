@@ -4,6 +4,56 @@ import argparse
 import json
 import os
 import numpy as np
+import os
+import glob
+from bigtree import Node
+from bigtree.utils.exceptions import TreeError
+
+root = Node("0", event_time="")
+event_to_node = {}
+event_to_node[""] = root
+fn_to_node = {}
+fn_to_node["0"] = root
+
+FUNCTION_ENTRY_VALUE = "ust.function.entry"
+FUNCTION_EXIT_VALUE = "ust.function.exit"
+
+def add_function_graph(event_time, function_type, this_fn, call_site):
+    print("calling add_function_graph event_time: {}, function_type: {}, this_fn: {}, call_site: {}".format(event_time, function_type, this_fn, call_site))
+    if function_type == FUNCTION_ENTRY_VALUE:
+        try:
+            new_node = Node(this_fn, event_time=event_time, parent=fn_to_node[call_site])
+            event_to_node[event_time] = new_node
+            fn_to_node[this_fn] = new_node
+            print(new_node)
+        except TreeError as te:
+            print(te)
+    elif function_type == FUNCTION_EXIT_VALUE:
+        print("{} exited".format(this_fn))
+
+
+def parse_function_events_per_core(core_path):
+    # parse function_activity_gantt0.csv
+    #files = [f for f in os.scandir(core_path) if os.path.isfile(f)]
+    #print(files)
+    gantt_file = glob.glob(core_path + "/function_activity_gantt0.csv")[0]
+    print(gantt_file)
+    with open(gantt_file, "r") as file:
+        while line := file.readline():
+            line = line.rstrip()
+            fields = line.split(';')
+            is_event_line = fields[0].isnumeric()
+            if not is_event_line:
+                continue
+            if len(fields) < 8:
+                continue
+            event_time = fields[0]
+            function_type = fields[1]
+            this_fn = fields[4].split('=')[-1]
+            call_site = fields[5].split('=')[-1]
+            add_function_graph(event_time, function_type, this_fn, call_site)
+    root.hshow()
+            
 
 EXAMPLE_USAGE = """
 Example Usage via RLlib CLI:
@@ -71,9 +121,21 @@ def translate_result(output_path):
 
 def run(args, parser):
     sim_dir = args.simdir
-    os.walk(sim_dir)
-    
-    return translate_result(sim_dir)
+    #cpu_clusters = [ f.path for f in os.scandir("data/simple_sim_dir/sim_dir") if f.is_dir() ]
+    cpu_clusters = [ f.path for f in os.scandir(sim_dir) if f.is_dir() ]
+    print(cpu_clusters)
+
+    for cpu_cluster in cpu_clusters:
+        cores_dir = os.path.join(cpu_cluster, "system_analyzer")
+        print(cores_dir)
+        core_folders = [ f.path for f in os.scandir(cores_dir) if f.is_dir() ]
+        print(core_folders)
+        # for each cpu core, get the function activities
+        #for core_path in core_folders:
+        #    parse_function_events_per_core(core_path)
+        parse_function_events_per_core(core_folders[0])
+
+    #return translate_result(sim_dir)
 
 if __name__ == "__main__":
     parser = create_parser()
