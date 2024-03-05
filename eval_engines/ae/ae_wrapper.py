@@ -13,6 +13,8 @@ import yaml
 import IPython
 from collections import deque
 from xml.etree import ElementTree as ET
+from subprocess import check_output
+from pathlib import Path
 
 from eval_engines.ae.designer import AE_Designer
 
@@ -66,15 +68,22 @@ class AeWrapper(object):
         print("root.tag: {}".format(root.tag)) # AR-PACKAGE
         print("root[0]: {}".format(root[0])) # ELEMENTS
         # TODO: create a new design according to the state
-        runnable_names = self.get_runnable_names(root)
+        runnable_names, timing_events = self.get_runnable_names(root)
+        self.build_params_for_result_translation(runnable_names, timing_events)
         print("runnable_names: {}".format(runnable_names))
         self.assign_runnables(root, state, runnable_names)
         tree_copy.write(fpath)
         AE_Designer(design_file_path=fpath, schema_path=self.schema_path)
         return design_folder, fpath
 
+    def build_params_for_result_translation(self, runnable_names, timing_events):
+        self.algo_names = [runnable_name.split('/')[-1] for runnable_name in runnable_names]
+        self.algo_event_intervals = [timing_events.get(runnable_name, 0) for runnable_name in runnable_names]
+        print("self.algo_names: {}, self.algo_event_intervals: {}".format(self.algo_names, self.algo_event_intervals))
+
     def get_runnable_names(self, xml_root):
         runnables = []
+        timing_events = {}
         print("ELEMENTS")
         for child in xml_root[0]:
             print("\t",child.tag, child.attrib)
@@ -101,11 +110,31 @@ class AeWrapper(object):
                                             if runnable_element.tag == 'SHORT-NAME':
                                                 runnable_name.append(runnable_element.attrib['ID'])
                                                 print("\t\t\t\t\tappending runnable name: {}".format('/'.join(runnable_name)))
-                                                runnables.append('/'.join(runnable_name))
+                                                runnables.append('/'+'/'.join(runnable_name))
                                                 runnable_name.pop()
                                 runnable_name.pop()
+                            if element.tag == "EVENTS":
+                                timing_events1 = self.get_timing_events(element)
+                                timing_events = {x: timing_events.get(x, 0.0) + timing_events1.get(x, 0.0) for x in set(timing_events).union(timing_events1)}
                         runnable_name.pop()
-        return runnables
+        return runnables, timing_events
+
+    def get_timing_events(self, events_element):
+        timing_events = {}
+        for event in events_element.findall('TIMING-EVENT'):
+            print("\t\t\t\t",event.tag, event.attrib)
+            mapped_runnable_name = ""
+            period = 0.0
+            for child in event:
+                print("\t\t\t\t\t",child.tag, child.attrib)
+                if child.tag == 'SHORT-NAME':
+                    print("\t\t\t\t\t\t",child.attrib['ID'])
+                if child.tag == 'START-ON-EVENT-REF':
+                    mapped_runnable_name = child.attrib['DEST']
+                if child.tag == 'PERIOD':
+                    period = float(child.attrib['value'])
+            timing_events[mapped_runnable_name] = period
+        return timing_events
 
     def get_arch_name(self, arch_index):
         if arch_index == 1:
@@ -185,18 +214,19 @@ class AeWrapper(object):
             runnable_element.append(mapping_element)
 
 
-    def simulate(self, fpath):
-        info = 0 # this means no error occurred
-        command = "ngspice -b %s >/dev/null 2>&1" %fpath
-        exit_code = os.system(command)
-        if debug:
-            print(command)
-            print(fpath)
-
-        if (exit_code % 256):
-           # raise RuntimeError('program {} failed!'.format(command))
-            info = 1 # this means an error has occurred
-        return info
+    def simulate(self, fpath, design_folder):
+        
+        workding_directory_path = os.path.join(design_folder, "ae_run", "WD")
+        Path(workding_directory_path).mkdir(parents=True, exist_ok=True)
+        print("Starting AE Engine")
+        start_time = time.time()
+        #workding_directory = "C:\\development\\AE\\Architecture_Explorer\\AutoCkt\\ae_data\\designs_SimpleExample\\SimpleExample_1_4_200000000_1_5364\\ae_run\\WD"
+        ae_engine_output = check_output("C:\\siemens\\SystemExplorer\\Automation_Engine\\AE_Engine.exe all --working_dir %s --root_dir C:\\siemens\\SystemExplorer --xml_file %s --xsd_schema C:\\siemens\\SystemExplorer\\config\\VSE_XSD_Schema\\S2S_VSE_XSD_schema.xsd --vista C:\\siemens\\VirtualPlatform --nucleus C:\\siemens" % (workding_directory_path, fpath))
+        end_time = time.time()
+        print("Done")
+        print("AE_Engine took {} seconds".format(end_time - start_time))
+        
+        return ae_engine_output
 
 
     def create_design_and_simulate(self, state, dsn_name=None, verbose=False):
@@ -210,7 +240,7 @@ class AeWrapper(object):
         if verbose:
             print(dsn_name)
         design_folder, fpath = self.create_design(state, dsn_name)
-        info = self.simulate(fpath)
+        info = self.simulate(fpath, design_folder)
         specs = self.translate_result(design_folder)
         return state, specs, info
 

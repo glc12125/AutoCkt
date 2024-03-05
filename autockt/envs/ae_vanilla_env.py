@@ -176,7 +176,7 @@ class ArchitectExplorerEnv(gym.Env):
 
         #initialize current parameters
         #self.cur_params_idx = np.array([33, 33, 33, 33, 33, 14, 20])
-        self.cur_params_idx = np.array([0, 3, 0, 0])
+        self.cur_params_idx = np.array([1, 3, 0, 0])
         self.cur_specs = self.update(self.cur_params_idx)
         cur_spec_norm = self.lookup(self.cur_specs, self.global_g)
         reward = self.reward(self.cur_specs, self.specs_ideal)
