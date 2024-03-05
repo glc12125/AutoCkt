@@ -17,7 +17,8 @@ from ray.rllib.agents.registry import get_agent_class
 from ray.tune.registry import register_env
 
 #from bag_deep_ckt.autockt.envs.bag_opamp_discrete import TwoStageAmp
-from envs.spectre_vanilla_opamp import TwoStageAmp
+#from envs.spectre_vanilla_opamp import TwoStageAmp
+from envs.ngspice_vanilla_opamp import TwoStageAmp
 
 EXAMPLE_USAGE = """
 Example Usage via RLlib CLI:
@@ -116,13 +117,18 @@ def unlookup(norm_spec, goal_spec):
     return spec
 
 def rollout(agent, env_name, num_steps, out="assdf", no_render=True):
+    print("hasattr(agent, \"local_evaluator\"): {}".format(hasattr(agent, "local_evaluator")))
     if hasattr(agent, "local_evaluator"):
         #env = agent.local_evaluator.env
         env_config = {"generalize":True,"num_valid":args.num_val_specs, "save_specs":False, "run_valid":True}
         if env_name == "opamp-v0":
             env = TwoStageAmp(env_config=env_config)
     else:
-        env = gym.make(env_name)
+        print("env_name: {}".format(env_name))
+        #env = gym.make(env_name)
+        env_config = {"generalize":True,"num_valid":args.num_val_specs, "save_specs":False, "run_valid":True}
+        if env_name == "opamp-v0":
+            env = TwoStageAmp(env_config=env_config)
 
     #get unnormlaized specs
     norm_spec_ref = env.global_g

@@ -85,11 +85,12 @@ class NgSpiceWrapper(object):
 
     def simulate(self, fpath):
         info = 0 # this means no error occurred
-        command = "ngspice -b %s >/dev/null 2>&1" %fpath
+        #command = "ngspice -b %s >/dev/null 2>&1" %fpath
+        command = "C:\\Spice64\\bin\\ngspice.exe -b %s > NUL 2>&1" %fpath
         exit_code = os.system(command)
         if debug:
-            print(command)
-            print(fpath)
+            print("command: %s" % command)
+            print("fpath: %s" % fpath)
 
         if (exit_code % 256):
            # raise RuntimeError('program {} failed!'.format(command))
