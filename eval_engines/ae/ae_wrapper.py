@@ -34,8 +34,10 @@ class AeWrapper(object):
 
         with open(yaml_path, 'r') as f:
             yaml_data = yaml.load(f)
-        design_xml = yaml_data['dsn_xml']
-        design_xml = path+'/'+design_xml
+        design_xml = path
+        folders = yaml_data['dsn_xml'].split('/')
+        for folder in folders:
+            design_xml = os.path.join(design_xml, folder)
  
         _, dsg_xml_fname = os.path.split(design_xml)
         self.base_design_name = os.path.splitext(dsg_xml_fname)[0]
@@ -46,7 +48,7 @@ class AeWrapper(object):
         os.makedirs(self.gen_dir, exist_ok=True)
 
         self.tree = ET.parse(design_xml)
-        self.schema_path = path + '/eval_engines/ae/S2S_VSE_XSD_schema.xsd'
+        self.schema_path = os.path.join(path, 'eval_engines', 'ae', 'S2S_VSE_XSD_schema.xsd')
 
     def get_design_name(self, state):
         fname = self.base_design_name

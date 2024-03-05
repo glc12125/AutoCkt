@@ -1,0 +1,377 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><AR-PACKAGE xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="file:///C:\siemens\SystemExplorer\config\VSE_XSD_Schema\S2S_VSE_XSD_schema.xsd">
+	<ELEMENTS>
+		<Simulation-Time simtime="700"/>
+		<OS>
+			<Nucleus_RTOS/>
+		</OS>
+		<!-- Interfaces -->
+		<SENDER-RECEIVER-INTERFACE>
+			<SHORT-NAME Buffer-Size="3" ID="SRI1" name="SRI1"/>
+			<DATA-ELEMENTS>
+				<VARIABLE-DATA-PROTOTYPE>
+					<SHORT-NAME ID="R1Data" name="R1Data"/>
+					<TYPE-TREF>
+						<Array-of-uint8 No_Of_Bytes="3">
+							<Random-Values-generated BoundaryRandomValue_Enable="true">
+								<Data-Range max="100" min="3"/>
+							</Random-Values-generated>
+						</Array-of-uint8>
+					</TYPE-TREF>
+				</VARIABLE-DATA-PROTOTYPE>
+			</DATA-ELEMENTS>
+		</SENDER-RECEIVER-INTERFACE>
+		<SENDER-RECEIVER-INTERFACE>
+			<SHORT-NAME Buffer-Size="3" ID="SRI2" name="SRI2"/>
+			<DATA-ELEMENTS>
+				<VARIABLE-DATA-PROTOTYPE>
+					<SHORT-NAME ID="R3Data" name="R3Data"/>
+					<TYPE-TREF>
+						<Array-of-uint8 No_Of_Bytes="3">
+							<Random-Values-generated BoundaryRandomValue_Enable="true">
+								<Data-Range max="100" min="3"/>
+							</Random-Values-generated>
+						</Array-of-uint8>
+					</TYPE-TREF>
+				</VARIABLE-DATA-PROTOTYPE>
+			</DATA-ELEMENTS>
+		</SENDER-RECEIVER-INTERFACE>
+		<SENDER-RECEIVER-INTERFACE>
+			<SHORT-NAME Buffer-Size="3" ID="SRI3" name="SRI3"/>
+			<DATA-ELEMENTS>
+				<VARIABLE-DATA-PROTOTYPE>
+					<SHORT-NAME ID="R5Data" name="R5Data"/>
+					<TYPE-TREF>
+						<Array-of-uint8 No_Of_Bytes="3">
+							<Random-Values-generated BoundaryRandomValue_Enable="true">
+								<Data-Range max="100" min="3"/>
+							</Random-Values-generated>
+						</Array-of-uint8>
+					</TYPE-TREF>
+				</VARIABLE-DATA-PROTOTYPE>
+			</DATA-ELEMENTS>
+		</SENDER-RECEIVER-INTERFACE>
+		<SENDER-RECEIVER-INTERFACE>
+			<SHORT-NAME Buffer-Size="3" ID="SRI4" name="SRI4"/>
+			<DATA-ELEMENTS>
+				<VARIABLE-DATA-PROTOTYPE>
+					<SHORT-NAME ID="R7Data" name="R7Data"/>
+					<TYPE-TREF>
+						<Array-of-uint8 No_Of_Bytes="3">
+							<Random-Values-generated BoundaryRandomValue_Enable="true">
+								<Data-Range max="100" min="3"/>
+							</Random-Values-generated>
+						</Array-of-uint8>
+					</TYPE-TREF>
+				</VARIABLE-DATA-PROTOTYPE>
+			</DATA-ELEMENTS>
+		</SENDER-RECEIVER-INTERFACE>
+
+		<APPLICATION-SW-COMPONENT-TYPE>
+			<SHORT-NAME ID="SWC1" name="SWC1"/>
+			<PORTS>
+				<P-PORT-PROTOTYPE>
+					<SHORT-NAME ID="swc1PP1" name="swc1PP1"/>
+					<PROVIDED-INTERFACE-TREF DEST="/SRI1"/>
+				</P-PORT-PROTOTYPE>
+				<P-PORT-PROTOTYPE>
+					<SHORT-NAME ID="swc1PP2" name="swc1PP2"/>
+					<PROVIDED-INTERFACE-TREF DEST="/SRI2"/>
+				</P-PORT-PROTOTYPE>
+				<R-PORT-PROTOTYPE>
+					<SHORT-NAME ID="swc1RP1" name="swc1RP1"/>
+					<REQUIRED-INTERFACE-TREF DEST="/SRI1"/>
+				</R-PORT-PROTOTYPE>
+				<R-PORT-PROTOTYPE>
+					<SHORT-NAME ID="swc1RP2" name="swc1RP2"/>
+					<REQUIRED-INTERFACE-TREF DEST="/SRI2"/>
+				</R-PORT-PROTOTYPE>
+			</PORTS>
+			<INTERNAL-BEHAVIORS>
+				<SWC-INTERNAL-BEHAVIOR>
+					<SHORT-NAME ID="SWC1_intB" name="SWC1_intB"/>
+					<RUNNABLES>
+						<RUNNABLE-ENTITY>
+							<SHORT-NAME ID="R1_Algo1" name="R1_Algo1"/>
+							<DATA-WRITE-ACCESSS>
+								<VARIABLE-ACCESS>
+									<SHORT-NAME ID="R1DataVar" name="R1DataVar"/>
+									<ACCESSED-VARIABLE>
+										<AUTOSAR-VARIABLE-IREF>
+											<PORT-PROTOTYPE-REF DEST="/SWC1/swc1PP1"/>
+											<TARGET-DATA-PROTOTYPE-REF DEST="/SRI1/R1Data"/>
+										</AUTOSAR-VARIABLE-IREF>
+									</ACCESSED-VARIABLE>
+								</VARIABLE-ACCESS>
+							</DATA-WRITE-ACCESSS>
+						</RUNNABLE-ENTITY>
+						<RUNNABLE-ENTITY>
+							<SHORT-NAME ID="R2_Algo2" name="R2_Algo2"/>
+							<DATA-READ-ACCESSS>
+								<VARIABLE-ACCESS>
+									<SHORT-NAME ID="R2DataVar" name="R2DataVar"/>
+									<ACCESSED-VARIABLE>
+										<AUTOSAR-VARIABLE-IREF>
+											<PORT-PROTOTYPE-REF DEST="/SWC1/swc1RP1"/>
+											<TARGET-DATA-PROTOTYPE-REF DEST="/SRI1/R1Data"/>
+										</AUTOSAR-VARIABLE-IREF>
+									</ACCESSED-VARIABLE>
+								</VARIABLE-ACCESS>
+							</DATA-READ-ACCESSS>
+						</RUNNABLE-ENTITY>
+
+
+
+						<RUNNABLE-ENTITY>
+							<SHORT-NAME ID="R3_Algo3" name="R3_Algo3"/>
+							<DATA-WRITE-ACCESSS>
+								<VARIABLE-ACCESS>
+									<SHORT-NAME ID="R3DataVar" name="R3DataVar"/>
+									<ACCESSED-VARIABLE>
+										<AUTOSAR-VARIABLE-IREF>
+											<PORT-PROTOTYPE-REF DEST="/SWC1/swc1PP2"/>
+											<TARGET-DATA-PROTOTYPE-REF DEST="/SRI2/R3Data"/>
+										</AUTOSAR-VARIABLE-IREF>
+									</ACCESSED-VARIABLE>
+								</VARIABLE-ACCESS>
+							</DATA-WRITE-ACCESSS>
+						</RUNNABLE-ENTITY>
+						<RUNNABLE-ENTITY>
+							<SHORT-NAME ID="R4_Algo4" name="R4_Algo4"/>
+							<DATA-READ-ACCESSS>
+								<VARIABLE-ACCESS>
+									<SHORT-NAME ID="R4DataVar" name="R4DataVar"/>
+									<ACCESSED-VARIABLE>
+										<AUTOSAR-VARIABLE-IREF>
+											<PORT-PROTOTYPE-REF DEST="/SWC1/swc1RP2"/>
+											<TARGET-DATA-PROTOTYPE-REF DEST="/SRI2/R3Data"/>
+										</AUTOSAR-VARIABLE-IREF>
+									</ACCESSED-VARIABLE>
+								</VARIABLE-ACCESS>
+							</DATA-READ-ACCESSS>
+						</RUNNABLE-ENTITY>
+					</RUNNABLES>
+
+					<EVENTS>
+						<TIMING-EVENT>
+							<SHORT-NAME ID="TER1_70ms" name="TER1_70ms"/>
+							<START-ON-EVENT-REF DEST="/SWC1/SWC1_intB/R1_Algo1"/>
+							<PERIOD value="0.07"/>
+						</TIMING-EVENT>
+						<TIMING-EVENT>
+							<SHORT-NAME ID="TER1_100ms" name="TER1_100ms"/>
+							<START-ON-EVENT-REF DEST="/SWC1/SWC1_intB/R3_Algo3"/>
+							<PERIOD value="0.1"/>
+						</TIMING-EVENT>
+						<DATA-RECEIVED-EVENT>
+							<SHORT-NAME ID="DRC_R2" name="DRC_R2"/>
+							<START-ON-EVENT-REF DEST="/SWC1/SWC1_intB/R2_Algo2"/>
+							<DATA-IREF>
+								<TARGET-DATA-ELEMENT-REF DEST="/SWC1/SWC1_intB/R2_Algo2/R2DataVar"/>
+							</DATA-IREF>
+						</DATA-RECEIVED-EVENT>
+						<DATA-RECEIVED-EVENT>
+							<SHORT-NAME ID="DRC_R4" name="DRC_R4"/>
+							<START-ON-EVENT-REF DEST="/SWC1/SWC1_intB/R4_Algo4"/>
+							<DATA-IREF>
+								<TARGET-DATA-ELEMENT-REF DEST="/SWC1/SWC1_intB/R4_Algo4/R4DataVar"/>
+							</DATA-IREF>
+						</DATA-RECEIVED-EVENT>
+					</EVENTS>
+				</SWC-INTERNAL-BEHAVIOR>
+			</INTERNAL-BEHAVIORS>
+		</APPLICATION-SW-COMPONENT-TYPE>
+
+
+		<APPLICATION-SW-COMPONENT-TYPE>
+			<SHORT-NAME ID="SWC2" name="SWC2"/>
+			<PORTS>
+				<P-PORT-PROTOTYPE>
+					<SHORT-NAME ID="SWC2PP1" name="SWC2PP1"/>
+					<PROVIDED-INTERFACE-TREF DEST="/SRI3"/>
+				</P-PORT-PROTOTYPE>
+				<P-PORT-PROTOTYPE>
+					<SHORT-NAME ID="SWC2PP2" name="SWC2PP2"/>
+					<PROVIDED-INTERFACE-TREF DEST="/SRI4"/>
+				</P-PORT-PROTOTYPE>
+				<R-PORT-PROTOTYPE>
+					<SHORT-NAME ID="SWC2RP1" name="SWC2RP1"/>
+					<REQUIRED-INTERFACE-TREF DEST="/SRI3"/>
+				</R-PORT-PROTOTYPE>
+				<R-PORT-PROTOTYPE>
+					<SHORT-NAME ID="SWC2RP2" name="SWC2RP2"/>
+					<REQUIRED-INTERFACE-TREF DEST="/SRI4"/>
+				</R-PORT-PROTOTYPE>
+			</PORTS>
+			<INTERNAL-BEHAVIORS>
+				<SWC-INTERNAL-BEHAVIOR>
+					<SHORT-NAME ID="SWC2_intB" name="SWC2_intB"/>
+					<RUNNABLES>
+						<RUNNABLE-ENTITY>
+							<SHORT-NAME ID="R5_Algo5" name="R5_Algo5"/>
+							<DATA-WRITE-ACCESSS>
+								<VARIABLE-ACCESS>
+									<SHORT-NAME ID="R5DataVar" name="R5DataVar"/>
+									<ACCESSED-VARIABLE>
+										<AUTOSAR-VARIABLE-IREF>
+											<PORT-PROTOTYPE-REF DEST="/SWC2/SWC2PP1"/>
+											<TARGET-DATA-PROTOTYPE-REF DEST="/SRI3/R5Data"/>
+										</AUTOSAR-VARIABLE-IREF>
+									</ACCESSED-VARIABLE>
+								</VARIABLE-ACCESS>
+							</DATA-WRITE-ACCESSS>
+						</RUNNABLE-ENTITY>
+						<RUNNABLE-ENTITY>
+							<SHORT-NAME ID="R6_Algo6" name="R6_Algo6"/>
+							<DATA-READ-ACCESSS>
+								<VARIABLE-ACCESS>
+									<SHORT-NAME ID="R6DataVar" name="R6DataVar"/>
+									<ACCESSED-VARIABLE>
+										<AUTOSAR-VARIABLE-IREF>
+											<PORT-PROTOTYPE-REF DEST="/SWC2/SWC2RP1"/>
+											<TARGET-DATA-PROTOTYPE-REF DEST="/SRI3/R5Data"/>
+										</AUTOSAR-VARIABLE-IREF>
+									</ACCESSED-VARIABLE>
+								</VARIABLE-ACCESS>
+							</DATA-READ-ACCESSS>
+						</RUNNABLE-ENTITY>
+
+
+
+						<RUNNABLE-ENTITY>
+							<SHORT-NAME ID="R7_Algo7" name="R7_Algo7"/>
+							<DATA-WRITE-ACCESSS>
+								<VARIABLE-ACCESS>
+									<SHORT-NAME ID="R7DataVar" name="R7DataVar"/>
+									<ACCESSED-VARIABLE>
+										<AUTOSAR-VARIABLE-IREF>
+											<PORT-PROTOTYPE-REF DEST="/SWC2/SWC2PP2"/>
+											<TARGET-DATA-PROTOTYPE-REF DEST="/SRI4/R7Data"/>
+										</AUTOSAR-VARIABLE-IREF>
+									</ACCESSED-VARIABLE>
+								</VARIABLE-ACCESS>
+							</DATA-WRITE-ACCESSS>
+						</RUNNABLE-ENTITY>
+						<RUNNABLE-ENTITY>
+							<SHORT-NAME ID="R8_Algo8" name="R8_Algo8"/>
+							<DATA-READ-ACCESSS>
+								<VARIABLE-ACCESS>
+									<SHORT-NAME ID="R8DataVar" name="R8DataVar"/>
+									<ACCESSED-VARIABLE>
+										<AUTOSAR-VARIABLE-IREF>
+											<PORT-PROTOTYPE-REF DEST="/SWC2/SWC2RP2"/>
+											<TARGET-DATA-PROTOTYPE-REF DEST="/SRI4/R7Data"/>
+										</AUTOSAR-VARIABLE-IREF>
+									</ACCESSED-VARIABLE>
+								</VARIABLE-ACCESS>
+							</DATA-READ-ACCESSS>
+						</RUNNABLE-ENTITY>
+					</RUNNABLES>
+
+					<EVENTS>
+						<TIMING-EVENT>
+							<SHORT-NAME ID="TER5_120ms" name="TER5_120ms"/>
+							<START-ON-EVENT-REF DEST="/SWC2/SWC2_intB/R5_Algo5"/>
+							<PERIOD value="0.12"/>
+						</TIMING-EVENT>
+						<TIMING-EVENT>
+							<SHORT-NAME ID="TER7_140ms" name="TER7_140ms"/>
+							<START-ON-EVENT-REF DEST="/SWC2/SWC2_intB/R7_Algo7"/>
+							<PERIOD value="0.14"/>
+						</TIMING-EVENT>
+						<DATA-RECEIVED-EVENT>
+							<SHORT-NAME ID="DRC_R6" name="DRC_R6"/>
+							<START-ON-EVENT-REF DEST="/SWC2/SWC2_intB/R6_Algo6"/>
+							<DATA-IREF>
+								<TARGET-DATA-ELEMENT-REF DEST="/SWC2/SWC2_intB/R6_Algo6/R6DataVar"/>
+							</DATA-IREF>
+						</DATA-RECEIVED-EVENT>
+						<DATA-RECEIVED-EVENT>
+							<SHORT-NAME ID="DRC_R8" name="DRC_R8"/>
+							<START-ON-EVENT-REF DEST="/SWC2/SWC2_intB/R8_Algo8"/>
+							<DATA-IREF>
+								<TARGET-DATA-ELEMENT-REF DEST="/SWC2/SWC2_intB/R8_Algo8/R8DataVar"/>
+							</DATA-IREF>
+						</DATA-RECEIVED-EVENT>
+					</EVENTS>
+				</SWC-INTERNAL-BEHAVIOR>
+			</INTERNAL-BEHAVIORS>
+		</APPLICATION-SW-COMPONENT-TYPE>
+
+		<!-- NeTWork Topology -->
+
+		<Network-Topology>
+			<Eth-Switch>
+				<SHORT-NAME ID="EthSwitch1" name="EthSwitch1"/>
+				<EthSwitch-INTERFACE-TREF DEST="/SRI5"/>
+			</Eth-Switch>
+		</Network-Topology>
+		
+		<!-- ECUs -> SoCs -> cpu Cluster -> Cores -->
+		<ECUs>
+			<SHORT-NAME ID="ECU1" name="ECU1"/>
+			<SoCs>
+				<SHORT-NAME ID="SoC1" name="SoC1"/>
+
+
+				<CPU_Cluster>
+					<ARMV8-Family>
+						<CortexA53>
+							<SHORT-NAME ID="CortexA53" name="CortexA53"/>
+							<Frequency name="100000000"/>
+							<Core>
+								<SHORT-NAME ID="A53Core0" name="A53Core0"/>
+								<Core-runnable-Mapping DEST="/SWC1/SWC1_intB/R1_Algo1" Load="100" priority="7"/>
+								<Core-runnable-Mapping DEST="/SWC1/SWC1_intB/R2_Algo2" Load="100" priority="6"/>
+							</Core>
+							<Core>
+								<SHORT-NAME ID="A53Core1" name="A53Core1"/>
+								<Core-runnable-Mapping DEST="/SWC1/SWC1_intB/R3_Algo3" Load="100" priority="7"/>
+								<Core-runnable-Mapping DEST="/SWC1/SWC1_intB/R4_Algo4" Load="100" priority="6"/>
+							</Core>
+						</CortexA53>
+
+					</ARMV8-Family>
+
+				</CPU_Cluster>
+
+				<CPU_Cluster>
+					<ARMV8-Family>
+						<CortexA72>
+							<SHORT-NAME ID="CortexA72" name="CortexA72"/>
+							<Frequency name="100000000"/>
+							<Core>
+								<SHORT-NAME ID="A72Core0" name="A72Core0"/>
+								<Core-runnable-Mapping DEST="/SWC2/SWC2_intB/R5_Algo5" Load="100" priority="7"/>
+								<Core-runnable-Mapping DEST="/SWC2/SWC2_intB/R6_Algo6" Load="100" priority="6"/>
+							</Core>
+							<Core>
+								<SHORT-NAME ID="A72Core1" name="A72Core1"/>
+								<Core-runnable-Mapping DEST="/SWC2/SWC2_intB/R7_Algo7" Load="100" priority="7"/>
+								<Core-runnable-Mapping DEST="/SWC2/SWC2_intB/R8_Algo8" Load="100" priority="6"/>
+							</Core>
+						</CortexA72>
+					</ARMV8-Family>
+
+				</CPU_Cluster>
+			</SoCs>
+
+		</ECUs>
+
+
+
+		<!-- Custom Analysis Options -->
+		<Analysis>
+			<Analysis-Enable>
+				<ALL-ECUs Enable="true">
+					<Analysis-output-directory Dir-Location=""/>
+					<Analyze_all_Sim_Time/>
+				</ALL-ECUs>
+			</Analysis-Enable>
+			<runnable-MIPS-Calculation name="R1_mips" runnable-Dest="/SWC1/SWC1_intB/R1_Algo1"/>
+		</Analysis>
+
+
+
+
+	</ELEMENTS>
+</AR-PACKAGE>

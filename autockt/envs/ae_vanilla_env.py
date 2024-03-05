@@ -63,7 +63,7 @@ class ArchitectExplorerEnv(gym.Env):
 
     #obtains yaml file
     path = os.getcwd()
-    CIR_YAML = path+'/eval_engines/ae/ae_inputs/yaml_files/simple_example.yaml'
+    CIR_YAML = os.path.join(path, 'eval_engines', 'ae', 'ae_inputs', 'yaml_files', 'simple_example.yaml')
 
     def __init__(self, env_config):
         self.multi_goal = env_config.get("multi_goal",False)
@@ -80,7 +80,7 @@ class ArchitectExplorerEnv(gym.Env):
         if self.generalize == False:
             specs = yaml_data['target_specs']
         else:
-            load_specs_path = ArchitectExplorerEnv.path+"/autockt/gen_specs/ae_specs_gen_simple_example.pkl"
+            load_specs_path = os.path.join(ArchitectExplorerEnv.path, "autockt", "gen_specs", "ae_specs_gen_simple_example.pkl")
             with open(load_specs_path, 'rb') as f:
                 specs = pickle.load(f)
             
