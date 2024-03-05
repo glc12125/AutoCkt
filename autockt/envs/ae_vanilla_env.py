@@ -247,8 +247,12 @@ class ArchitectExplorerEnv(gym.Env):
         pos_val = [] 
         reward = 0.0
         for i,rel_spec in enumerate(rel_specs):
-            if(self.specs_id[i] == 'ibias_max'):
-                rel_spec = rel_spec*-1.0#/10.0
+            if(self.specs_id[i] == 'mean_interval_deviation'):
+                rel_spec = rel_spec*-1.0 # the smaller the better, smaller negative value is better. If it is positive, meaning it overshoots, do not penalize
+            if(self.specs_id[i] == 'max_interval_deviation'):
+                rel_spec = rel_spec*-1.0 # the more stable the better, smaller negative value is better. If it is positive, meaning it overshoots, do not penalize
+            if(self.specs_id[i] == 'idle_percentage'):
+                rel_spec = rel_spec*-1.0 # Use the resource as much as possible, smaller negative value is better. If it is positive, meaning it overshoots, do not penalize
             if rel_spec < 0:
                 reward += rel_spec
                 pos_val.append(0)

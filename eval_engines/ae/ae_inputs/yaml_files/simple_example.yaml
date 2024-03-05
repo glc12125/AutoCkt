@@ -10,10 +10,10 @@ params:
   arch_per_cluster:  !!python/tuple [1, 3, 1]
 
 #Every specification output will be normlaized in the order of (mean_interval_deviation, max_interval_deviation, idle_percentage)
-normalize: !!python/tuple [0, 0, 0.6]
+normalize: !!python/tuple [1.5, 2.5, 0.6]
 
 #during training, at reset a specification will be chosen at random between [min,max,#]
 target_specs:
-  mean_interval_deviation: !!python/tuple [-5, 5]
-  max_interval_deviation: !!python/tuple [-15, 15]
+  mean_interval_deviation: !!python/tuple [0, 3]
+  max_interval_deviation: !!python/tuple [0, 5]
   idle_percentage: !!python/tuple [0.4, 0.8]
