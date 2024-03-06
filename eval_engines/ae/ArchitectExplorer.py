@@ -38,7 +38,7 @@ class ArchitectExplorer(AeWrapper):
                 cpu_state['busy_time'] += int(event_time) - cpu_state['busy_start_time']
             cpu_state['last_exit_time'] = int(event_time)
 
-    def parse_function_activity_per_core(core_path, algo_names, algo_event_intervals):
+    def parse_function_activity_per_core(self, core_path, algo_names, algo_event_intervals):
         activity_file = glob.glob(core_path + "/function_activity0.csv")[0]
         #print("\tProcessing activity file: {}".format(activity_file))
         algo_timestamp_mapping = {}
@@ -147,7 +147,7 @@ class ArchitectExplorer(AeWrapper):
             result: dict(spec_kwds, spec_value)
         """
 
-        os.path.join(output_path, "ae_run", "WD")
+        output_path = os.path.join(output_path, "ae_run", "WD", "sim_dir")
         # use parse output here
         metrics = {}
         cpu_clusters = [ f.path for f in os.scandir(output_path) if f.is_dir() ]
@@ -162,10 +162,10 @@ class ArchitectExplorer(AeWrapper):
                 #metrics = metrics | parse_function_activity_per_core(core_folder, algo_names, algo_event_intervals)
                 #metrics = metrics | parse_idle_per_core(core_folder)
                 metrics1 = self.parse_function_activity_per_core(core_folder, self.algo_names, self.algo_event_intervals)
-                metrics = {x: metrics.get(x, {}) | metrics1.get(x, {})
+                metrics = {x: {**metrics.get(x, {}), **metrics1.get(x, {})}
                         for x in set(metrics).union(metrics1)}
                 metrics1 = self.parse_idle_per_core(core_folder)
-                metrics = {x: metrics.get(x, {}) | metrics1.get(x, {})
+                metrics = {x: {**metrics.get(x, {}), **metrics1.get(x, {})}
                         for x in set(metrics).union(metrics1)}
             #parse_function_activity_per_core(core_folders[1], algo_names)
             #parse_idle_per_core(core_folders[1])

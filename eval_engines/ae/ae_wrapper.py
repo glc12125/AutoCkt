@@ -60,19 +60,25 @@ class AeWrapper(object):
         return fname
 
     def create_design(self, state, new_fname):
-        design_folder = os.path.join(self.gen_dir, new_fname)+ "_" + str(random.randint(0,10000))
+        #design_folder = os.path.join(self.gen_dir, new_fname)+ "_" + str(random.randint(0,10000))
+        existing_files = os.listdir(self.gen_dir)
+        latest_index = 0
+        for file in existing_files:
+            if int(file) > latest_index:
+                latest_index = int(file)
+        design_folder = os.path.join(self.gen_dir, str(latest_index+1))
         os.makedirs(design_folder, exist_ok=True)
 
         fpath = os.path.join(design_folder, new_fname + '.xml')
 
         tree_copy = copy.deepcopy(self.tree)
         root = tree_copy.getroot()
-        print("root.tag: {}".format(root.tag)) # AR-PACKAGE
-        print("root[0]: {}".format(root[0])) # ELEMENTS
+        #print("root.tag: {}".format(root.tag)) # AR-PACKAGE
+        #print("root[0]: {}".format(root[0])) # ELEMENTS
         # TODO: create a new design according to the state
         runnable_names, timing_events = self.get_runnable_names(root)
         self.build_params_for_result_translation(runnable_names, timing_events)
-        print("runnable_names: {}".format(runnable_names))
+        #print("runnable_names: {}".format(runnable_names))
         self.assign_runnables(root, state, runnable_names)
         tree_copy.write(fpath)
         AE_Designer(design_file_path=fpath, schema_path=self.schema_path)
@@ -81,26 +87,26 @@ class AeWrapper(object):
     def build_params_for_result_translation(self, runnable_names, timing_events):
         self.algo_names = [runnable_name.split('/')[-1] for runnable_name in runnable_names]
         self.algo_event_intervals = [timing_events.get(runnable_name, 0) for runnable_name in runnable_names]
-        print("self.algo_names: {}, self.algo_event_intervals: {}".format(self.algo_names, self.algo_event_intervals))
+        #print("self.algo_names: {}, self.algo_event_intervals: {}".format(self.algo_names, self.algo_event_intervals))
 
     def get_runnable_names(self, xml_root):
         runnables = []
         timing_events = {}
-        print("ELEMENTS")
+        #print("ELEMENTS")
         for child in xml_root[0]:
-            print("\t",child.tag, child.attrib)
+            #print("\t",child.tag, child.attrib)
             if child.tag == 'APPLICATION-SW-COMPONENT-TYPE':
                 runnable_name = deque()
                 for grandchild in child:
-                    print("\t\t",grandchild.tag, grandchild.attrib)
+                    #print("\t\t",grandchild.tag, grandchild.attrib)
                     if grandchild.tag == 'SHORT-NAME':
                         # Get first part of the runnable name
                         runnable_name.append(grandchild.attrib['ID'])
                     if grandchild.tag == 'INTERNAL-BEHAVIORS':
                         swc_internal_behaviour = grandchild[0]
-                        print("\t\t\tSWC-INTERNAL-BEHAVIOR")
+                        #print("\t\t\tSWC-INTERNAL-BEHAVIOR")
                         for element in swc_internal_behaviour:
-                            print("\t\t\t\t", element.tag, element.attrib)
+                            #print("\t\t\t\t", element.tag, element.attrib)
                             if element.tag == "SHORT-NAME":
                                 # Get the second part of the runnable name
                                 runnable_name.append(element.attrib['ID'])
@@ -108,10 +114,10 @@ class AeWrapper(object):
                                 for runnable in element:
                                     if runnable.tag == 'RUNNABLE-ENTITY':
                                         for runnable_element in runnable:
-                                            print("\t\t\t\t\t",runnable_element.tag, runnable_element.attrib)
+                                            #print("\t\t\t\t\t",runnable_element.tag, runnable_element.attrib)
                                             if runnable_element.tag == 'SHORT-NAME':
                                                 runnable_name.append(runnable_element.attrib['ID'])
-                                                print("\t\t\t\t\tappending runnable name: {}".format('/'.join(runnable_name)))
+                                                #print("\t\t\t\t\tappending runnable name: {}".format('/'.join(runnable_name)))
                                                 runnables.append('/'+'/'.join(runnable_name))
                                                 runnable_name.pop()
                                 runnable_name.pop()
@@ -124,13 +130,13 @@ class AeWrapper(object):
     def get_timing_events(self, events_element):
         timing_events = {}
         for event in events_element.findall('TIMING-EVENT'):
-            print("\t\t\t\t",event.tag, event.attrib)
+            #print("\t\t\t\t",event.tag, event.attrib)
             mapped_runnable_name = ""
             period = 0.0
             for child in event:
-                print("\t\t\t\t\t",child.tag, child.attrib)
-                if child.tag == 'SHORT-NAME':
-                    print("\t\t\t\t\t\t",child.attrib['ID'])
+                #print("\t\t\t\t\t",child.tag, child.attrib)
+                #if child.tag == 'SHORT-NAME':
+                #    print("\t\t\t\t\t\t",child.attrib['ID'])
                 if child.tag == 'START-ON-EVENT-REF':
                     mapped_runnable_name = child.attrib['DEST']
                 if child.tag == 'PERIOD':
@@ -149,21 +155,21 @@ class AeWrapper(object):
     def get_core_name(self, arch_index, core_index):
         arch_prefix = ""
         if arch_index == 1:
-            arch_prefix = "A53Core" + str(core_index)
+            arch_prefix = "A53Core" + str(arch_index) + "_" + str(core_index)
         elif arch_index == 2:
-            arch_prefix = "A72Core" + str(core_index)
+            arch_prefix = "A72Core" + str(arch_index) + "_" + str(core_index)
         else:
             raise ValueError("Invalid arch index: {}, supported indexes [1, 2]".format(arch_index))
         return arch_prefix
 
     def assign_runnables(self, xml_root, state, runnable_names):
-        print("Using state: {} to build CPU clusters".format(state))
+        #print("Using state: {} to build CPU clusters".format(state))
         soc_element = None
         for child in xml_root[0]:
-            print("\t",child.tag, child.attrib)
+            #print("\t",child.tag, child.attrib)
             if child.tag == 'ECUs':
                 for grandchild in child:
-                    print("\t\t",grandchild.tag, grandchild.attrib)
+                    #print("\t\t",grandchild.tag, grandchild.attrib)
                     if grandchild.tag == 'SoCs':
                         soc_element = grandchild
                         for element in soc_element.findall('CPU_Cluster'):
@@ -171,7 +177,7 @@ class AeWrapper(object):
         cluster_num = state['cluster_num']
         core_per_cluster = state['core_per_cluster']
         quick_core_index_mapping = [[ET.Element('Core') for j in range(core_per_cluster)] for i in range(cluster_num)]
-        print("quick_core_index_mapping: {}".format(quick_core_index_mapping))
+        #print("quick_core_index_mapping: {}".format(quick_core_index_mapping))
         for cluster_index in range(cluster_num):
             cluster = ET.Element('CPU_Cluster')
             arm_family = ET.Element('ARMV8-Family')
@@ -182,8 +188,8 @@ class AeWrapper(object):
             cluster.append(arm_family)
 
             shortname = ET.Element('SHORT-NAME')
-            shortname.set('ID', arch_name)
-            shortname.set('name', arch_name)
+            shortname.set('ID', arch_name + "_" + str(cluster_index))
+            shortname.set('name', arch_name+ "_" + str(cluster_index))
             cluster_arch.append(shortname)
 
             frequency = ET.Element('Frequency')
@@ -207,7 +213,7 @@ class AeWrapper(object):
         for i, runnable_name in enumerate(runnable_names):
             cluster_i = int(i / core_per_cluster) % cluster_num
             core_i = int(i % core_per_cluster)
-            print("cluster_i: {}, core_i: {}, runnable_name: {}".format(cluster_i, core_i, runnable_name))
+            #print("cluster_i: {}, core_i: {}, runnable_name: {}".format(cluster_i, core_i, runnable_name))
             runnable_element = quick_core_index_mapping[cluster_i][core_i]
             mapping_element = ET.Element('Core-runnable-Mapping')
             mapping_element.set('DEST', runnable_name)

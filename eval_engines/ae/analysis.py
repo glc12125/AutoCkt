@@ -37,7 +37,8 @@ def parse_function_activity_per_core(core_path, algo_names, algo_event_intervals
     for algo_name in algo_names:
         algo_timestamp_mapping[algo_name] = []
     with open(activity_file, "r") as file:
-        while line := file.readline():
+        lines = file.readlines()
+        for line in lines:
             line = line.rstrip()
             fields = line.split(';')
             is_event_line = fields[0].isnumeric()
@@ -104,7 +105,8 @@ def parse_idle_per_core(core_path):
         cpu_key: {}
     }
     with open(gantt_file, "r") as file:
-        while line := file.readline():
+        lines = file.readlines()
+        for line in lines:
             line = line.rstrip()
             fields = line.split(';')
             is_event_line = fields[0].isnumeric()
@@ -201,10 +203,10 @@ def translate_result(sim_dir, algo_names, algo_event_intervals):
             #metrics = metrics | parse_function_activity_per_core(core_folder, algo_names, algo_event_intervals)
             #metrics = metrics | parse_idle_per_core(core_folder)
             metrics1 = parse_function_activity_per_core(core_folder, algo_names, algo_event_intervals)
-            metrics = {x: metrics.get(x, {}) | metrics1.get(x, {})
+            metrics = {x: {**metrics.get(x, {}), **metrics1.get(x, {})}
                     for x in set(metrics).union(metrics1)}
             metrics1 = parse_idle_per_core(core_folder)
-            metrics = {x: metrics.get(x, {}) | metrics1.get(x, {})
+            metrics = {x: {**metrics.get(x, {}), **metrics1.get(x, {})}
                     for x in set(metrics).union(metrics1)}
         #parse_function_activity_per_core(core_folders[1], algo_names)
         #parse_idle_per_core(core_folders[1])

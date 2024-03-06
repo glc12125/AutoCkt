@@ -101,7 +101,7 @@ class ArchitectExplorerEnv(gym.Env):
         self.sim_env = ArchitectExplorer(yaml_path=ArchitectExplorerEnv.CIR_YAML, num_process=int(self.num_process), path=ArchitectExplorerEnv.path) 
         self.action_meaning = [-1,0,1] 
         self.action_space = spaces.Tuple([spaces.Discrete(len(self.action_meaning))]*len(self.params_id))
-        print("self.action_space: {}".format(self.action_space))
+        #print("self.action_space: {}".format(self.action_space))
         #self.action_space = spaces.Discrete(len(self.action_meaning)**len(self.params_id))
         self.observation_space = spaces.Box(
             low=np.array([ArchitectExplorerEnv.PERF_LOW]*2*len(self.specs_id)+len(self.params_id)*[1]),
@@ -121,7 +121,7 @@ class ArchitectExplorerEnv(gym.Env):
         #objective number (used for validation)
         self.obj_idx = 0
 
-        print("self.params: {}".format(self.params))
+        #print("self.params: {}".format(self.params))
 
     def build_params(self, yaml_data):
         # param array
@@ -193,25 +193,25 @@ class ArchitectExplorerEnv(gym.Env):
         #print("self.params: {}".format(self.params))
         #for i, param in enumerate(self.params):
         #    print("len(param): {}".format(len(param)))
-        print("self.params_id: {}".format(self.params_id))
+        #print("self.params_id: {}".format(self.params_id))
         #Take action that RL agent returns to change current params
         action = list(np.reshape(np.array(action),(np.array(action).shape[0],)))
-        print("action: {}".format(action))
+        #print("action: {}".format(action))
         self.cur_params_idx = self.cur_params_idx + np.array([self.action_meaning[a] for a in action])
-        print("self.cur_params_idx: {}".format(self.cur_params_idx))
-#        self.cur_params_idx = self.cur_params_idx + np.array(self.action_arr[int(action)])
+        #print("self.cur_params_idx: {}".format(self.cur_params_idx))
+        #self.cur_params_idx = self.cur_params_idx + np.array(self.action_arr[int(action)])
         #self.cur_params_idx = np.clip(self.cur_params_idx, [0]*len(self.params_id), [(len(param_vec)-1) for param_key, param_vec in self.params.items()])
         self.cur_params_idx = np.clip(self.cur_params_idx, a_min = [0]*len(self.params_id), a_max = [len(self.params['cluster_num']) - 1, len(self.params['core_per_cluster']) - 1, len(self.params['freq_per_cluster'][len(self.params['cluster_num']) - 1]) - 1, len(self.params['arch_per_cluster'][len(self.params['cluster_num']) - 1]) - 1] )
         self.cur_params_idx = np.clip(self.cur_params_idx, a_min = [0]*len(self.params_id), a_max = [len(self.params['cluster_num']) - 1, len(self.params['core_per_cluster']) - 1, len(self.params['freq_per_cluster'][self.params['cluster_num'][self.cur_params_idx[0]]]) - 1, len(self.params['arch_per_cluster'][self.params['cluster_num'][self.cur_params_idx[0]]]) - 1] )
         
-        print("self.cur_params_idx 2: {}".format(self.cur_params_idx))
+        #print("self.cur_params_idx 2: {}".format(self.cur_params_idx))
         #Get current specs and normalize
         self.cur_specs = self.update(self.cur_params_idx)
-        print("self.cur_specs: {}".format(self.cur_specs))
+        #print("self.cur_specs: {}".format(self.cur_specs))
         cur_spec_norm  = self.lookup(self.cur_specs, self.global_g)
-        print("cur_spec_norm: {}".format(cur_spec_norm))
+        #print("cur_spec_norm: {}".format(cur_spec_norm))
         reward = self.reward(self.cur_specs, self.specs_ideal)
-        print("reward: {}".format(reward))
+        #print("reward: {}".format(reward))
         done = False
 
         #incentivize reaching goal state
@@ -223,15 +223,15 @@ class ArchitectExplorerEnv(gym.Env):
             print('ideal specs:', self.specs_ideal)
             print('re:', reward)
             print('-'*10)
-        print("self.specs_ideal: {}".format(self.specs_ideal))
+        #print("self.specs_ideal: {}".format(self.specs_ideal))
         print("self.specs_ideal_norm: {}".format(self.specs_ideal_norm))
         self.ob = np.concatenate([cur_spec_norm, self.specs_ideal_norm, self.cur_params_idx])
         print("self.ob: {}".format(self.ob))
         self.env_steps = self.env_steps + 1
 
-        #print('cur ob:' + str(self.cur_specs))
-        #print('ideal spec:' + str(self.specs_ideal))
-        #print(reward)
+        print('cur ob:' + str(self.cur_specs))
+        print('ideal spec:' + str(self.specs_ideal))
+        print(reward)
         return self.ob, reward, done, {}
 
     def lookup(self, spec, goal_spec):
@@ -285,8 +285,8 @@ class ArchitectExplorerEnv(gym.Env):
         freq_per_cluster = self.params['freq_per_cluster'][cluster_num][params_idx[2]]
         arch_per_cluster = self.params['arch_per_cluster'][cluster_num][params_idx[3]]
         params = [cluster_num, core_per_cluster, freq_per_cluster, arch_per_cluster]
-        print("in update, params: {}".format(params))
-        print("in update, params_idx: {}".format(params_idx))
+        #print("in update, params: {}".format(params))
+        #print("in update, params_idx: {}".format(params_idx))
         param_val = [OrderedDict(list(zip(self.params_id,params)))]
         cur_specs = OrderedDict(sorted(self.sim_env.create_design_and_simulate(param_val[0])[1].items(), key=lambda k:k[0]))
         cur_specs = np.array(list(cur_specs.values()))
