@@ -24,7 +24,7 @@ class ArchitectExplorer(AeWrapper):
     MAX_INTERVAL_DIFF_METRIC_NAME = "max_interval_deviation"
     CPU_IDLE_PERCENTAGE_METRIC_NAME = "idle_percentage"
 
-    def process_function_event(event_time, function_type, this_fn, call_site, cpu_state):
+    def process_function_event(self, event_time, function_type, this_fn, call_site, cpu_state):
         #print("calling process_function_event event_time: {}, function_type: {}, this_fn: {}, call_site: {}".format(event_time, function_type, this_fn, call_site))
         if function_type == ArchitectExplorer.FUNCTION_ENTRY_VALUE:
             if cpu_state['init_time'] == 0:
@@ -77,15 +77,15 @@ class ArchitectExplorer(AeWrapper):
             if len(algo_timestamp_mapping[algo_name]) > 0:
                 #print("\t\talgo_name: {}".format(algo_name))
                 mean_interval_ms = 0.0
-                max_interval_ms = 0.0
+                max_interval_ms = -10.0
                 counter = 0
                 for idx, time in enumerate(algo_timestamp_mapping[algo_name]):
                     if idx > 0:
                         prev_time = algo_timestamp_mapping[algo_name][idx - 1]
                         diff = time - prev_time
-                        if diff > 0 and diff > algo_event_intervals[index] * 1000000000:
+                        if diff > 0 and diff > 0.9*(algo_event_intervals[index] * 1000000000):
                             #print("\t\t\t{} and prev gap: {}, cur_stamp: {}, prev_stamp: {}".format(idx, diff, time, prev_time))
-                            cur_interval_diff_ms = abs(diff - algo_event_intervals[index]*1000000000) / 1000000
+                            cur_interval_diff_ms = (diff - algo_event_intervals[index]*1000000000) / 1000000
                             max_interval_ms = max(max_interval_ms, cur_interval_diff_ms)
                             mean_interval_ms = (mean_interval_ms * counter + cur_interval_diff_ms) / (counter + 1)
                             counter += 1
@@ -146,7 +146,8 @@ class ArchitectExplorer(AeWrapper):
         :return
             result: dict(spec_kwds, spec_value)
         """
-
+        print("Translating simulation result")
+        start_time = time.time()
         output_path = os.path.join(output_path, "ae_run", "WD", "sim_dir")
         # use parse output here
         metrics = {}
@@ -186,5 +187,7 @@ class ArchitectExplorer(AeWrapper):
         specs[ArchitectExplorer.MAX_INTERVAL_DIFF_METRIC_NAME] = np.max(specs[ArchitectExplorer.MAX_INTERVAL_DIFF_METRIC_NAME])
         specs[ArchitectExplorer.CPU_IDLE_PERCENTAGE_METRIC_NAME] = np.mean(specs[ArchitectExplorer.CPU_IDLE_PERCENTAGE_METRIC_NAME])
         print("final specs: {}".format(specs))
-
+        end_time = time.time()
+        print("Translation took {} seconds".format(end_time - start_time))
+        
         return specs

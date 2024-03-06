@@ -32,7 +32,7 @@ def process_function_event(event_time, function_type, this_fn, call_site, cpu_st
 
 def parse_function_activity_per_core(core_path, algo_names, algo_event_intervals):
     activity_file = glob.glob(core_path + "/function_activity0.csv")[0]
-    #print("\tProcessing activity file: {}".format(activity_file))
+    print("\tProcessing activity file: {}".format(activity_file))
     algo_timestamp_mapping = {}
     for algo_name in algo_names:
         algo_timestamp_mapping[algo_name] = []
@@ -56,6 +56,7 @@ def parse_function_activity_per_core(core_path, algo_names, algo_event_intervals
             #    time_stamps_algo5.append(int(event_time))
             for index, algo_name in enumerate(algo_names):
                 if algo_name in function_type and algo_event_intervals[index] > 0:
+                    print("adding event {} to {}".format(event_time, algo_name))
                     algo_timestamp_mapping[algo_name].append(int(event_time))
     core_key = os.path.basename(core_path)
     metrics = {
@@ -67,23 +68,23 @@ def parse_function_activity_per_core(core_path, algo_names, algo_event_intervals
 
     for index, algo_name in enumerate(algo_names):
         if len(algo_timestamp_mapping[algo_name]) > 0:
-            #print("\t\talgo_name: {}".format(algo_name))
+            print("\t\talgo_name: {}".format(algo_name))
             mean_interval_ms = 0.0
-            max_interval_ms = 0.0
+            max_interval_ms = -10.0
             counter = 0
             for idx, time in enumerate(algo_timestamp_mapping[algo_name]):
                 if idx > 0:
                     prev_time = algo_timestamp_mapping[algo_name][idx - 1]
                     diff = time - prev_time
-                    if diff > 0 and diff > algo_event_intervals[index] * 1000000000:
-                        #print("\t\t\t{} and prev gap: {}, cur_stamp: {}, prev_stamp: {}".format(idx, diff, time, prev_time))
-                        cur_interval_diff_ms = abs(diff - algo_event_intervals[index]*1000000000) / 1000000
+                    if diff > 0 and diff > 0.9*(algo_event_intervals[index] * 1000000000):
+                        print("\t\t\t{} and prev gap: {}, cur_stamp: {}, prev_stamp: {}".format(idx, diff, time, prev_time))
+                        cur_interval_diff_ms = (diff - algo_event_intervals[index]*1000000000) / 1000000
                         max_interval_ms = max(max_interval_ms, cur_interval_diff_ms)
                         mean_interval_ms = (mean_interval_ms * counter + cur_interval_diff_ms) / (counter + 1)
                         counter += 1
             metrics[core_key][MEAN_INTERVAL_DIFF_METRIC_NAME] += [mean_interval_ms]
             metrics[core_key][MAX_INTERVAL_DIFF_METRIC_NAME] += [max_interval_ms]
-    #print("metrics: {}".format(metrics))
+    print("metrics: {}".format(metrics))
 
     return metrics
 

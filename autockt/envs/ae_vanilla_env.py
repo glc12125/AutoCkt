@@ -58,8 +58,8 @@ class OrderedDictYAMLLoader(yaml.Loader):
 class ArchitectExplorerEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    PERF_LOW = -1
-    PERF_HIGH = 0
+    PERF_LOW = -100
+    PERF_HIGH = 100
 
     #obtains yaml file
     path = os.getcwd()
@@ -91,6 +91,15 @@ class ArchitectExplorerEnv(gym.Env):
         
         self.specs_ideal = []
         self.specs_id = list(self.specs.keys())
+        print("self.specs_id: {}".format(self.specs_id))
+        inteded_specs_key_index = {
+            "mean_interval_deviation": 0,
+            "max_interval_deviation": 1,
+            "idle_percentage": 2
+        }
+        self.current_specs_key_index = [0, 1, 2]
+        for idx, spec_key in enumerate(self.specs_id):
+            self.current_specs_key_index[idx] = inteded_specs_key_index[spec_key]
         self.fixed_goal_idx = -1 
         self.num_os = len(list(self.specs.values())[0])
         
@@ -104,8 +113,8 @@ class ArchitectExplorerEnv(gym.Env):
         #print("self.action_space: {}".format(self.action_space))
         #self.action_space = spaces.Discrete(len(self.action_meaning)**len(self.params_id))
         self.observation_space = spaces.Box(
-            low=np.array([ArchitectExplorerEnv.PERF_LOW]*2*len(self.specs_id)+len(self.params_id)*[1]),
-            high=np.array([ArchitectExplorerEnv.PERF_HIGH]*2*len(self.specs_id)+len(self.params_id)*[1]))
+            low=np.array([ArchitectExplorerEnv.PERF_LOW]*2*len(self.specs_id)+len(self.params_id)*[0]),
+            high=np.array([ArchitectExplorerEnv.PERF_HIGH]*2*len(self.specs_id)+[3, 7, 624, 15]), dtype=np.float64)
 
         #initialize current param/spec observations
         self.cur_specs = np.zeros(len(self.specs_id), dtype=np.float32)
@@ -113,15 +122,18 @@ class ArchitectExplorerEnv(gym.Env):
 
         #Get the g* (overall design spec) you want to reach
         self.global_g = []
+        #print("list(self.specs.values()): {}".format(list(self.specs.values())))
         for spec in list(self.specs.values()):
                 self.global_g.append(float(spec[self.fixed_goal_idx]))
+        self.global_g = [self.global_g[i] for i in self.current_specs_key_index]
         self.g_star = np.array(self.global_g)
+
         self.global_g = np.array(yaml_data['normalize'])
         
         #objective number (used for validation)
         self.obj_idx = 0
 
-        #print("self.params: {}".format(self.params))
+        #print("self.specs: {}".format(self.specs))
 
     def build_params(self, yaml_data):
         # param array
@@ -159,6 +171,7 @@ class ArchitectExplorerEnv(gym.Env):
             self.specs_ideal = []
             for spec in list(self.specs.values()):
                 self.specs_ideal.append(spec[idx])
+            self.specs_ideal = [self.specs_ideal[i] for i in self.current_specs_key_index]
             self.specs_ideal = np.array(self.specs_ideal)
         else:
             if self.multi_goal == False:
@@ -168,21 +181,25 @@ class ArchitectExplorerEnv(gym.Env):
                 self.specs_ideal = []
                 for spec in list(self.specs.values()):
                     self.specs_ideal.append(spec[idx])
+                self.specs_ideal = [self.specs_ideal[i] for i in self.current_specs_key_index]
                 self.specs_ideal = np.array(self.specs_ideal)
+
         #print("num total:"+str(self.num_os))
 
         #applicable only when you have multiple goals, normalizes everything to some global_g
         self.specs_ideal_norm = self.lookup(self.specs_ideal, self.global_g)
-
+        print("Resetting, using {}th spec, initialize specs_dieal to {}, specs_ideal_norm to {}, global_g: {}".format(idx, self.specs_ideal, self.specs_ideal_norm, self.global_g))
         #initialize current parameters
         #self.cur_params_idx = np.array([33, 33, 33, 33, 33, 14, 20])
-        self.cur_params_idx = np.array([1, 3, 0, 0])
+        self.cur_params_idx = np.array([0, 3, 0, 0])
         self.cur_specs = self.update(self.cur_params_idx)
         cur_spec_norm = self.lookup(self.cur_specs, self.global_g)
         reward = self.reward(self.cur_specs, self.specs_ideal)
 
         #observation is a combination of current specs distance from ideal, ideal spec, and current param vals
         self.ob = np.concatenate([cur_spec_norm, self.specs_ideal_norm, self.cur_params_idx])
+        self.env_steps = 0
+
         return self.ob
  
     def step(self, action):
@@ -202,7 +219,8 @@ class ArchitectExplorerEnv(gym.Env):
         #self.cur_params_idx = self.cur_params_idx + np.array(self.action_arr[int(action)])
         #self.cur_params_idx = np.clip(self.cur_params_idx, [0]*len(self.params_id), [(len(param_vec)-1) for param_key, param_vec in self.params.items()])
         self.cur_params_idx = np.clip(self.cur_params_idx, a_min = [0]*len(self.params_id), a_max = [len(self.params['cluster_num']) - 1, len(self.params['core_per_cluster']) - 1, len(self.params['freq_per_cluster'][len(self.params['cluster_num']) - 1]) - 1, len(self.params['arch_per_cluster'][len(self.params['cluster_num']) - 1]) - 1] )
-        self.cur_params_idx = np.clip(self.cur_params_idx, a_min = [0]*len(self.params_id), a_max = [len(self.params['cluster_num']) - 1, len(self.params['core_per_cluster']) - 1, len(self.params['freq_per_cluster'][self.params['cluster_num'][self.cur_params_idx[0]]]) - 1, len(self.params['arch_per_cluster'][self.params['cluster_num'][self.cur_params_idx[0]]]) - 1] )
+        max_core_num = int(self.runnable_num / self.params['cluster_num'][self.cur_params_idx[0]])
+        self.cur_params_idx = np.clip(self.cur_params_idx, a_min = [0]*len(self.params_id), a_max = [len(self.params['cluster_num']) - 1, min(max_core_num - 1, len(self.params['core_per_cluster']) - 1), len(self.params['freq_per_cluster'][self.params['cluster_num'][self.cur_params_idx[0]]]) - 1, len(self.params['arch_per_cluster'][self.params['cluster_num'][self.cur_params_idx[0]]]) - 1] )
         
         #print("self.cur_params_idx 2: {}".format(self.cur_params_idx))
         #Get current specs and normalize
@@ -224,6 +242,7 @@ class ArchitectExplorerEnv(gym.Env):
             print('re:', reward)
             print('-'*10)
         #print("self.specs_ideal: {}".format(self.specs_ideal))
+        print("env steps: {}".format(self.env_steps))
         print("self.specs_ideal_norm: {}".format(self.specs_ideal_norm))
         self.ob = np.concatenate([cur_spec_norm, self.specs_ideal_norm, self.cur_params_idx])
         print("self.ob: {}".format(self.ob))
@@ -231,7 +250,7 @@ class ArchitectExplorerEnv(gym.Env):
 
         print('cur ob:' + str(self.cur_specs))
         print('ideal spec:' + str(self.specs_ideal))
-        print(reward)
+        print('reward: {}'.format(reward))
         return self.ob, reward, done, {}
 
     def lookup(self, spec, goal_spec):
@@ -251,8 +270,8 @@ class ArchitectExplorerEnv(gym.Env):
                 rel_spec = rel_spec*-1.0 # the smaller the better, smaller negative value is better. If it is positive, meaning it overshoots, do not penalize
             if(self.specs_id[i] == 'max_interval_deviation'):
                 rel_spec = rel_spec*-1.0 # the more stable the better, smaller negative value is better. If it is positive, meaning it overshoots, do not penalize
-            if(self.specs_id[i] == 'idle_percentage'):
-                rel_spec = rel_spec*-1.0 # Use the resource as much as possible, smaller negative value is better. If it is positive, meaning it overshoots, do not penalize
+            #if(self.specs_id[i] == 'idle_percentage'):
+            #    rel_spec = rel_spec*-1.0 # Use the resource as much as possible, smaller negative value is better. If it is positive, meaning it overshoots, do not penalize
             if rel_spec < 0:
                 reward += rel_spec
                 pos_val.append(0)

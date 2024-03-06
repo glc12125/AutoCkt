@@ -5,7 +5,7 @@ runnable_load: 10000
 
 params:
   cluster_num:  !!python/tuple [1, 5, 1]
-  core_per_cluster:  !!python/tuple [1, 9, 1]
+  core_per_cluster:  !!python/tuple [1, 5, 1]
   freq_per_cluster:  !!python/tuple [200000000, 1000000001, 200000000]
   arch_per_cluster:  !!python/tuple [1, 3, 1]
 
