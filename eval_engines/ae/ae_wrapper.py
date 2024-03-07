@@ -30,7 +30,7 @@ def remove_readonly(func, path, _):
 class AeWrapper(object):
 
     BASE_TMP_DIR = os.path.abspath("./ae_data")
-    RUNNABLE_LOAD = 10000
+    RUNNABLE_LOAD = 20000
     RUNNABLE_PRIORITY = 7
 
     def __init__(self, num_process, yaml_path, path, root_dir=None):

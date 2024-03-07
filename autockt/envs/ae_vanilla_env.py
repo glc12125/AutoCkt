@@ -92,14 +92,7 @@ class ArchitectExplorerEnv(gym.Env):
         self.specs_ideal = []
         self.specs_id = list(self.specs.keys())
         print("self.specs_id: {}".format(self.specs_id))
-        inteded_specs_key_index = {
-            "mean_interval_deviation": 0,
-            "max_interval_deviation": 1,
-            "idle_percentage": 2
-        }
-        self.current_specs_key_index = [0, 1, 2]
-        for idx, spec_key in enumerate(self.specs_id):
-            self.current_specs_key_index[idx] = inteded_specs_key_index[spec_key]
+
         self.fixed_goal_idx = -1 
         self.num_os = len(list(self.specs.values())[0])
         
@@ -108,7 +101,7 @@ class ArchitectExplorerEnv(gym.Env):
         
         #initialize sim environment
         self.sim_env = ArchitectExplorer(yaml_path=ArchitectExplorerEnv.CIR_YAML, num_process=int(self.num_process), path=ArchitectExplorerEnv.path) 
-        self.action_meaning = [-1,0,1] 
+        self.action_meaning = [-1,0,2] 
         self.action_space = spaces.Tuple([spaces.Discrete(len(self.action_meaning))]*len(self.params_id))
         #print("self.action_space: {}".format(self.action_space))
         #self.action_space = spaces.Discrete(len(self.action_meaning)**len(self.params_id))
@@ -125,7 +118,6 @@ class ArchitectExplorerEnv(gym.Env):
         #print("list(self.specs.values()): {}".format(list(self.specs.values())))
         for spec in list(self.specs.values()):
                 self.global_g.append(float(spec[self.fixed_goal_idx]))
-        self.global_g = [self.global_g[i] for i in self.current_specs_key_index]
         self.g_star = np.array(self.global_g)
 
         self.global_g = np.array(yaml_data['normalize'])
@@ -171,7 +163,6 @@ class ArchitectExplorerEnv(gym.Env):
             self.specs_ideal = []
             for spec in list(self.specs.values()):
                 self.specs_ideal.append(spec[idx])
-            self.specs_ideal = [self.specs_ideal[i] for i in self.current_specs_key_index]
             self.specs_ideal = np.array(self.specs_ideal)
         else:
             if self.multi_goal == False:
@@ -181,7 +172,6 @@ class ArchitectExplorerEnv(gym.Env):
                 self.specs_ideal = []
                 for spec in list(self.specs.values()):
                     self.specs_ideal.append(spec[idx])
-                self.specs_ideal = [self.specs_ideal[i] for i in self.current_specs_key_index]
                 self.specs_ideal = np.array(self.specs_ideal)
 
         #print("num total:"+str(self.num_os))
@@ -191,7 +181,7 @@ class ArchitectExplorerEnv(gym.Env):
         print("Resetting, using {}th spec, initialize specs_dieal to {}, specs_ideal_norm to {}, global_g: {}".format(idx, self.specs_ideal, self.specs_ideal_norm, self.global_g))
         #initialize current parameters
         #self.cur_params_idx = np.array([33, 33, 33, 33, 33, 14, 20])
-        self.cur_params_idx = np.array([0, 3, 0, 0])
+        self.cur_params_idx = np.array([1, 1, 11, 1])
         self.cur_specs = self.update(self.cur_params_idx)
         cur_spec_norm = self.lookup(self.cur_specs, self.global_g)
         reward = self.reward(self.cur_specs, self.specs_ideal)
@@ -245,10 +235,10 @@ class ArchitectExplorerEnv(gym.Env):
         print("env steps: {}".format(self.env_steps))
         print("self.specs_ideal_norm: {}".format(self.specs_ideal_norm))
         self.ob = np.concatenate([cur_spec_norm, self.specs_ideal_norm, self.cur_params_idx])
-        print("self.ob: {}".format(self.ob))
+        print("observations: {}".format(self.ob))
         self.env_steps = self.env_steps + 1
 
-        print('cur ob:' + str(self.cur_specs))
+        print('cur specs:' + str(self.cur_specs))
         print('ideal spec:' + str(self.specs_ideal))
         print('reward: {}'.format(reward))
         return self.ob, reward, done, {}
@@ -262,7 +252,9 @@ class ArchitectExplorerEnv(gym.Env):
         '''
         Reward: doesn't penalize for overshooting spec, is negative
         '''
+        print("spec: {}, goal_spec: {}".format(spec, goal_spec))
         rel_specs = self.lookup(spec, goal_spec)
+        print("rel_specs: {}".format(rel_specs))
         pos_val = [] 
         reward = 0.0
         for i,rel_spec in enumerate(rel_specs):
