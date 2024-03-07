@@ -58,8 +58,8 @@ class OrderedDictYAMLLoader(yaml.Loader):
 class ArchitectExplorerEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    PERF_LOW = -100
-    PERF_HIGH = 100
+    PERF_LOW = -10000000
+    PERF_HIGH = 10000000
 
     #obtains yaml file
     path = os.getcwd()
