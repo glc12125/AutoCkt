@@ -21,8 +21,9 @@ class ArchitectExplorer(AeWrapper):
     FUNCTION_EXIT_VALUE = "ust.function.exit"
 
     MEAN_INTERVAL_DIFF_METRIC_NAME = "mean_interval_deviation"
-    MAX_INTERVAL_DIFF_METRIC_NAME = "max_interval_deviation"
+    MAX_INTERVAL_DIFF_METRIC_NAME = "max_interval_deviation_diff"
     CPU_IDLE_PERCENTAGE_METRIC_NAME = "idle_percentage"
+    CPU_IDLE_PERCENTAGE_MIN_DIFF_METRIC_NAME = "idle_percentage_min_diff"
 
     def process_function_event(self, event_time, function_type, this_fn, call_site, cpu_state):
         #print("calling process_function_event event_time: {}, function_type: {}, this_fn: {}, call_site: {}".format(event_time, function_type, this_fn, call_site))
@@ -176,7 +177,8 @@ class ArchitectExplorer(AeWrapper):
         specs = {
             ArchitectExplorer.MEAN_INTERVAL_DIFF_METRIC_NAME: [],
             ArchitectExplorer.MAX_INTERVAL_DIFF_METRIC_NAME: [],
-            ArchitectExplorer.CPU_IDLE_PERCENTAGE_METRIC_NAME: []
+            ArchitectExplorer.CPU_IDLE_PERCENTAGE_METRIC_NAME: [],
+            ArchitectExplorer.CPU_IDLE_PERCENTAGE_MIN_DIFF_METRIC_NAME: 0.0
         }
         for key, value in metrics.items():
             specs[ArchitectExplorer.MEAN_INTERVAL_DIFF_METRIC_NAME] += value[ArchitectExplorer.MEAN_INTERVAL_DIFF_METRIC_NAME]
@@ -185,6 +187,7 @@ class ArchitectExplorer(AeWrapper):
 
         specs[ArchitectExplorer.MEAN_INTERVAL_DIFF_METRIC_NAME] = np.mean(specs[ArchitectExplorer.MEAN_INTERVAL_DIFF_METRIC_NAME])
         specs[ArchitectExplorer.MAX_INTERVAL_DIFF_METRIC_NAME] = np.max(specs[ArchitectExplorer.MAX_INTERVAL_DIFF_METRIC_NAME])
+        specs[ArchitectExplorer.MAX_INTERVAL_DIFF_METRIC_NAME] = specs[ArchitectExplorer.MAX_INTERVAL_DIFF_METRIC_NAME] - specs[ArchitectExplorer.MEAN_INTERVAL_DIFF_METRIC_NAME]
         specs[ArchitectExplorer.CPU_IDLE_PERCENTAGE_METRIC_NAME] = np.mean(specs[ArchitectExplorer.CPU_IDLE_PERCENTAGE_METRIC_NAME])
         print("final specs: {}".format(specs))
         end_time = time.time()

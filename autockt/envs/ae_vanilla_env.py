@@ -246,11 +246,17 @@ class ArchitectExplorerEnv(gym.Env):
     def lookup(self, spec, goal_spec):
         goal_spec = [float(e) for e in goal_spec]
         norm_spec = (spec-goal_spec)/(goal_spec+spec)
+        for idx, goal_min_diff in enumerate(goal_spec):
+            # assuming idle_percentage_min_diff after ordered by key
+            if idx == 1:
+                max_idle = goal_spec[0] + goal_min_diff
+                spec_idle = spec[0]
+                norm_spec[1] = (spec_idle-max_idle)/(max_idle+spec_idle)
         return norm_spec
     
     def reward(self, spec, goal_spec):
         '''
-        Reward: doesn't penalize for overshooting spec, is negative
+        Reward: doesn't penalize for overshooting some spec, is negative
         '''
         print("spec: {}, goal_spec: {}".format(spec, goal_spec))
         rel_specs = self.lookup(spec, goal_spec)
@@ -260,8 +266,11 @@ class ArchitectExplorerEnv(gym.Env):
         for i,rel_spec in enumerate(rel_specs):
             if(self.specs_id[i] == 'mean_interval_deviation'):
                 rel_spec = rel_spec*-1.0 # the smaller the better, smaller negative value is better. If it is positive, meaning it overshoots, do not penalize
-            if(self.specs_id[i] == 'max_interval_deviation'):
+            if(self.specs_id[i] == 'max_interval_deviation_diff'):
                 rel_spec = rel_spec*-1.0 # the more stable the better, smaller negative value is better. If it is positive, meaning it overshoots, do not penalize
+            if(self.specs_id[i] == 'idle_percentage_min_diff'):
+                rel_spec = rel_spec*-1.0 # the less the better, smaller negative value is better. If it is positive, meaning it overshoots, penalize
+            
             #if(self.specs_id[i] == 'idle_percentage'):
             #    rel_spec = rel_spec*-1.0 # Use the resource as much as possible, smaller negative value is better. If it is positive, meaning it overshoots, do not penalize
             if rel_spec < 0:
@@ -299,7 +308,9 @@ class ArchitectExplorerEnv(gym.Env):
         #print("in update, params: {}".format(params))
         #print("in update, params_idx: {}".format(params_idx))
         param_val = [OrderedDict(list(zip(self.params_id,params)))]
-        cur_specs = OrderedDict(sorted(self.sim_env.create_design_and_simulate(param_val[0])[1].items(), key=lambda k:k[0]))
+        ordered_specs = sorted(self.sim_env.create_design_and_simulate(param_val[0])[1].items(), key=lambda k:k[0])
+        cur_specs = OrderedDict(ordered_specs)
+        print("ordered_specs: {}".format(cur_specs))
         cur_specs = np.array(list(cur_specs.values()))
 
         return cur_specs
