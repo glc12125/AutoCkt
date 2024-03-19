@@ -58,6 +58,8 @@ def gen_data(CIR_YAML, env, num_specs):
   for key,value in specs_range.items():
       specs_range[key] = specs_valid[i]
       i+=1
+  #specs_range["max_interval_deviation"] = tuple(map(sum, zip(*[specs_range["mean_interval_deviation"], specs_range["max_interval_deviation_diff"]])))
+  #specs_range["idle_percentage_min"] = tuple(map(sum, zip(*[specs_range["idle_percentage"], specs_range["idle_percentage_min_diff"]])))
   with open("autockt/gen_specs/ae_specs_gen_"+ env + ".pkl", 'wb') as f:
     pickle.dump(specs_range,f)
 
