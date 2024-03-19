@@ -21,10 +21,11 @@ class ArchitectExplorer(AeWrapper):
     FUNCTION_EXIT_VALUE = "ust.function.exit"
 
     MEAN_INTERVAL_DIFF_METRIC_NAME = "mean_interval_deviation"
-    MAX_INTERVAL_DIFF_METRIC_NAME = "max_interval_deviation"
+    MAX_INTERVAL_DIFF_METRIC_NAME = "max_interval_deviation_diff"
     CPU_IDLE_PERCENTAGE_METRIC_NAME = "idle_percentage"
+    CPU_IDLE_PERCENTAGE_MIN_DIFF_METRIC_NAME = "idle_percentage_min_diff"
 
-    def process_function_event(event_time, function_type, this_fn, call_site, cpu_state):
+    def process_function_event(self, event_time, function_type, this_fn, call_site, cpu_state):
         #print("calling process_function_event event_time: {}, function_type: {}, this_fn: {}, call_site: {}".format(event_time, function_type, this_fn, call_site))
         if function_type == ArchitectExplorer.FUNCTION_ENTRY_VALUE:
             if cpu_state['init_time'] == 0:
@@ -38,7 +39,7 @@ class ArchitectExplorer(AeWrapper):
                 cpu_state['busy_time'] += int(event_time) - cpu_state['busy_start_time']
             cpu_state['last_exit_time'] = int(event_time)
 
-    def parse_function_activity_per_core(core_path, algo_names, algo_event_intervals):
+    def parse_function_activity_per_core(self, core_path, algo_names, algo_event_intervals):
         activity_file = glob.glob(core_path + "/function_activity0.csv")[0]
         #print("\tProcessing activity file: {}".format(activity_file))
         algo_timestamp_mapping = {}
@@ -77,15 +78,15 @@ class ArchitectExplorer(AeWrapper):
             if len(algo_timestamp_mapping[algo_name]) > 0:
                 #print("\t\talgo_name: {}".format(algo_name))
                 mean_interval_ms = 0.0
-                max_interval_ms = 0.0
+                max_interval_ms = -10.0
                 counter = 0
                 for idx, time in enumerate(algo_timestamp_mapping[algo_name]):
                     if idx > 0:
                         prev_time = algo_timestamp_mapping[algo_name][idx - 1]
                         diff = time - prev_time
-                        if diff > 0 and diff > algo_event_intervals[index] * 1000000000:
+                        if diff > 0 and diff > 0.9*(algo_event_intervals[index] * 1000000000):
                             #print("\t\t\t{} and prev gap: {}, cur_stamp: {}, prev_stamp: {}".format(idx, diff, time, prev_time))
-                            cur_interval_diff_ms = abs(diff - algo_event_intervals[index]*1000000000) / 1000000
+                            cur_interval_diff_ms = (diff - algo_event_intervals[index]*1000000000) / 1000000
                             max_interval_ms = max(max_interval_ms, cur_interval_diff_ms)
                             mean_interval_ms = (mean_interval_ms * counter + cur_interval_diff_ms) / (counter + 1)
                             counter += 1
@@ -146,8 +147,9 @@ class ArchitectExplorer(AeWrapper):
         :return
             result: dict(spec_kwds, spec_value)
         """
-
-        os.path.join(output_path, "ae_run", "WD")
+        print("Translating simulation result")
+        start_time = time.time()
+        output_path = os.path.join(output_path, "ae_run", "WD", "sim_dir")
         # use parse output here
         metrics = {}
         cpu_clusters = [ f.path for f in os.scandir(output_path) if f.is_dir() ]
@@ -162,10 +164,10 @@ class ArchitectExplorer(AeWrapper):
                 #metrics = metrics | parse_function_activity_per_core(core_folder, algo_names, algo_event_intervals)
                 #metrics = metrics | parse_idle_per_core(core_folder)
                 metrics1 = self.parse_function_activity_per_core(core_folder, self.algo_names, self.algo_event_intervals)
-                metrics = {x: metrics.get(x, {}) | metrics1.get(x, {})
+                metrics = {x: {**metrics.get(x, {}), **metrics1.get(x, {})}
                         for x in set(metrics).union(metrics1)}
                 metrics1 = self.parse_idle_per_core(core_folder)
-                metrics = {x: metrics.get(x, {}) | metrics1.get(x, {})
+                metrics = {x: {**metrics.get(x, {}), **metrics1.get(x, {})}
                         for x in set(metrics).union(metrics1)}
             #parse_function_activity_per_core(core_folders[1], algo_names)
             #parse_idle_per_core(core_folders[1])
@@ -175,7 +177,8 @@ class ArchitectExplorer(AeWrapper):
         specs = {
             ArchitectExplorer.MEAN_INTERVAL_DIFF_METRIC_NAME: [],
             ArchitectExplorer.MAX_INTERVAL_DIFF_METRIC_NAME: [],
-            ArchitectExplorer.CPU_IDLE_PERCENTAGE_METRIC_NAME: []
+            ArchitectExplorer.CPU_IDLE_PERCENTAGE_METRIC_NAME: [],
+            ArchitectExplorer.CPU_IDLE_PERCENTAGE_MIN_DIFF_METRIC_NAME: 0.0
         }
         for key, value in metrics.items():
             specs[ArchitectExplorer.MEAN_INTERVAL_DIFF_METRIC_NAME] += value[ArchitectExplorer.MEAN_INTERVAL_DIFF_METRIC_NAME]
@@ -184,7 +187,10 @@ class ArchitectExplorer(AeWrapper):
 
         specs[ArchitectExplorer.MEAN_INTERVAL_DIFF_METRIC_NAME] = np.mean(specs[ArchitectExplorer.MEAN_INTERVAL_DIFF_METRIC_NAME])
         specs[ArchitectExplorer.MAX_INTERVAL_DIFF_METRIC_NAME] = np.max(specs[ArchitectExplorer.MAX_INTERVAL_DIFF_METRIC_NAME])
+        specs[ArchitectExplorer.MAX_INTERVAL_DIFF_METRIC_NAME] = specs[ArchitectExplorer.MAX_INTERVAL_DIFF_METRIC_NAME] - specs[ArchitectExplorer.MEAN_INTERVAL_DIFF_METRIC_NAME]
         specs[ArchitectExplorer.CPU_IDLE_PERCENTAGE_METRIC_NAME] = np.mean(specs[ArchitectExplorer.CPU_IDLE_PERCENTAGE_METRIC_NAME])
         print("final specs: {}".format(specs))
-
+        end_time = time.time()
+        print("Translation took {} seconds".format(end_time - start_time))
+        
         return specs

@@ -15,15 +15,22 @@ from collections import deque
 from xml.etree import ElementTree as ET
 from subprocess import check_output
 from pathlib import Path
+import shutil
+import stat
 
 from eval_engines.ae.designer import AE_Designer
 
 debug = False
 
+def remove_readonly(func, path, _):
+    "Clear the readonly bit and reattempt the removal"
+    os.chmod(path, stat.S_IWRITE)
+    func(path)
+
 class AeWrapper(object):
 
     BASE_TMP_DIR = os.path.abspath("./ae_data")
-    RUNNABLE_LOAD = 10000
+    RUNNABLE_LOAD = 20000
     RUNNABLE_PRIORITY = 7
 
     def __init__(self, num_process, yaml_path, path, root_dir=None):
@@ -34,8 +41,10 @@ class AeWrapper(object):
 
         with open(yaml_path, 'r') as f:
             yaml_data = yaml.load(f)
-        design_xml = yaml_data['dsn_xml']
-        design_xml = path+'/'+design_xml
+        design_xml = path
+        folders = yaml_data['dsn_xml'].split('/')
+        for folder in folders:
+            design_xml = os.path.join(design_xml, folder)
  
         _, dsg_xml_fname = os.path.split(design_xml)
         self.base_design_name = os.path.splitext(dsg_xml_fname)[0]
@@ -46,7 +55,7 @@ class AeWrapper(object):
         os.makedirs(self.gen_dir, exist_ok=True)
 
         self.tree = ET.parse(design_xml)
-        self.schema_path = path + '/eval_engines/ae/S2S_VSE_XSD_schema.xsd'
+        self.schema_path = os.path.join(path, 'eval_engines', 'ae', 'S2S_VSE_XSD_schema.xsd')
 
     def get_design_name(self, state):
         fname = self.base_design_name
@@ -149,12 +158,12 @@ class AeWrapper(object):
         else:
             raise ValueError("Invalid arch index: {}, supported indexes [1, 2]".format(arch_index))
 
-    def get_core_name(self, arch_index, core_index):
+    def get_core_name(self, arch_index, cluster_index, core_index):
         arch_prefix = ""
         if arch_index == 1:
-            arch_prefix = "A53Core" + str(core_index)
+            arch_prefix = "A53Core" + str(cluster_index) + "_" + str(core_index)
         elif arch_index == 2:
-            arch_prefix = "A72Core" + str(core_index)
+            arch_prefix = "A72Core" + str(cluster_index) + "_" + str(core_index)
         else:
             raise ValueError("Invalid arch index: {}, supported indexes [1, 2]".format(arch_index))
         return arch_prefix
@@ -185,8 +194,8 @@ class AeWrapper(object):
             cluster.append(arm_family)
 
             shortname = ET.Element('SHORT-NAME')
-            shortname.set('ID', arch_name)
-            shortname.set('name', arch_name)
+            shortname.set('ID', arch_name + "_" + str(cluster_index))
+            shortname.set('name', arch_name+ "_" + str(cluster_index))
             cluster_arch.append(shortname)
 
             frequency = ET.Element('Frequency')
@@ -197,7 +206,7 @@ class AeWrapper(object):
             for core_index in range(core_per_cluster):
                 core = ET.Element('Core')
                 shortname = ET.Element('SHORT-NAME')
-                core_name = self.get_core_name(arch_index, core_index)
+                core_name = self.get_core_name(arch_index, cluster_index, core_index)
                 shortname.set('ID', core_name)
                 shortname.set('name', core_name)
                 core.append(shortname)
@@ -229,8 +238,8 @@ class AeWrapper(object):
         ae_engine_output = check_output("C:\\siemens\\SystemExplorer\\Automation_Engine\\AE_Engine.exe all --working_dir %s --root_dir C:\\siemens\\SystemExplorer --xml_file %s --xsd_schema C:\\siemens\\SystemExplorer\\config\\VSE_XSD_Schema\\S2S_VSE_XSD_schema.xsd --vista C:\\siemens\\VirtualPlatform --nucleus C:\\siemens" % (workding_directory_path, fpath))
         end_time = time.time()
         print("Done")
-        print("AE_Engine took {} seconds".format(end_time - start_time))
-        
+        print("AE_Engine took {} seconds.".format(end_time - start_time))
+
         return ae_engine_output
 
 
@@ -247,8 +256,16 @@ class AeWrapper(object):
         design_folder, fpath = self.create_design(state, dsn_name)
         info = self.simulate(fpath, design_folder)
         specs = self.translate_result(design_folder)
+        self.cleanup_sim(design_folder)
         return state, specs, info
 
+    def cleanup_sim(self, design_folder):
+        print("Cleaning up simulation")
+        workding_directory_path = os.path.join(design_folder, "ae_run", "WD")
+        start_time = time.time()
+        shutil.rmtree(workding_directory_path, onerror=remove_readonly)
+        end_time = time.time()
+        print("Cleanup took {} seconds".format(end_time-start_time))
 
     def run(self, states, design_names=None, verbose=False):
         """
