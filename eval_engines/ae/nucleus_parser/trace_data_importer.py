@@ -539,7 +539,7 @@ class TraceDataImporter:
         # Calculate CPU utilization metrics
         for cpu_id, percentages in self.active_cpu_busy_percentage.items():
             for idx, percentage in enumerate(percentages):
-                if idx < self.start_cpu_stats_indexes[cpu_id]:
+                if idx < self.start_cpu_stats_indexes[cpu_id] or self.start_cpu_stats_indexes[cpu_id] == -1:
                     continue
                 specs[CPU_TASK_MAX_UTILIZATION_METRIC_NAME].append(percentage)
         # Calculate CPU states metrics
