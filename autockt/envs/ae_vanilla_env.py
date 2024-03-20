@@ -60,6 +60,7 @@ class ArchitectExplorerEnv(gym.Env):
 
     PERF_LOW = -10000000
     PERF_HIGH = 10000000
+    IDLE_PERCENTAGE_MIN_DIFF_INDEX = 2
 
     #obtains yaml file
     path = os.getcwd()
@@ -248,10 +249,10 @@ class ArchitectExplorerEnv(gym.Env):
         norm_spec = (spec-goal_spec)/(goal_spec+spec)
         for idx, goal_min_diff in enumerate(goal_spec):
             # assuming idle_percentage_min_diff after ordered by key
-            if idx == 1:
-                max_idle = goal_spec[0] + goal_min_diff
-                spec_idle = spec[0]
-                norm_spec[1] = (spec_idle-max_idle)/(max_idle+spec_idle)
+            if idx == ArchitectExplorerEnv.IDLE_PERCENTAGE_MIN_DIFF_INDEX:
+                max_idle = goal_spec[ArchitectExplorerEnv.IDLE_PERCENTAGE_MIN_DIFF_INDEX-1] + goal_min_diff
+                spec_idle = spec[ArchitectExplorerEnv.IDLE_PERCENTAGE_MIN_DIFF_INDEX-1]
+                norm_spec[ArchitectExplorerEnv.IDLE_PERCENTAGE_MIN_DIFF_INDEX] = (spec_idle-max_idle)/(max_idle+spec_idle)
         return norm_spec
     
     def reward(self, spec, goal_spec):
@@ -265,11 +266,13 @@ class ArchitectExplorerEnv(gym.Env):
         reward = 0.0
         for i,rel_spec in enumerate(rel_specs):
             if(self.specs_id[i] == 'mean_interval_deviation'):
-                rel_spec = rel_spec*-1.0 # the smaller the better, smaller negative value is better. If it is positive, meaning it overshoots, do not penalize
+                rel_spec = rel_spec*-1.0 # the smaller the better, smaller negative value is better. If it is positive, meaning failed the criteria, penalize
             if(self.specs_id[i] == 'max_interval_deviation_diff'):
-                rel_spec = rel_spec*-1.0 # the more stable the better, smaller negative value is better. If it is positive, meaning it overshoots, do not penalize
+                rel_spec = rel_spec*-1.0 # the more stable the better, smaller negative value is better. If it is positive, meaning failed the criteria, penalize
             if(self.specs_id[i] == 'idle_percentage_min_diff'):
-                rel_spec = rel_spec*-1.0 # the less the better, smaller negative value is better. If it is positive, meaning it overshoots, penalize
+                rel_spec = rel_spec*-1.0 # the less the better, smaller negative value is better. If it is positive, meaning it failed the criteria, penalize
+            if(self.specs_id[i] == 'cpu_task_max_utilization'):
+                rel_spec = rel_spec*-1.0 # the less the better, smaller negative value is better. If it is positive, meaning it failed the criteria, penalize
             
             #if(self.specs_id[i] == 'idle_percentage'):
             #    rel_spec = rel_spec*-1.0 # Use the resource as much as possible, smaller negative value is better. If it is positive, meaning it overshoots, do not penalize

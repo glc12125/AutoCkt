@@ -9,11 +9,14 @@ import json
 import numpy as np
 import glob
 import time
+import sys
 from collections import deque
 
 debug = False
 
 from eval_engines.ae.ae_wrapper import AeWrapper
+from eval_engines.ae.nucleus_parser.trace_data_importer import TraceDataImporter
+from eval_engines.ae.nucleus_parser.trace_packet_reader import TracePacketReader
 
 class ArchitectExplorer(AeWrapper):
 
@@ -24,6 +27,7 @@ class ArchitectExplorer(AeWrapper):
     MAX_INTERVAL_DIFF_METRIC_NAME = "max_interval_deviation_diff"
     CPU_IDLE_PERCENTAGE_METRIC_NAME = "idle_percentage"
     CPU_IDLE_PERCENTAGE_MIN_DIFF_METRIC_NAME = "idle_percentage_min_diff"
+    CPU_TASK_MAX_UTILIZATION_METRIC_NAME = "cpu_task_max_utilization"
 
     def process_function_event(self, event_time, function_type, this_fn, call_site, cpu_state):
         #print("calling process_function_event event_time: {}, function_type: {}, this_fn: {}, call_site: {}".format(event_time, function_type, this_fn, call_site))
@@ -40,6 +44,7 @@ class ArchitectExplorer(AeWrapper):
             cpu_state['last_exit_time'] = int(event_time)
 
     def parse_function_activity_per_core(self, core_path, algo_names, algo_event_intervals):
+        start_runnable_time = sys.maxsize
         activity_file = glob.glob(core_path + "/function_activity0.csv")[0]
         #print("\tProcessing activity file: {}".format(activity_file))
         algo_timestamp_mapping = {}
@@ -85,6 +90,7 @@ class ArchitectExplorer(AeWrapper):
                         prev_time = algo_timestamp_mapping[algo_name][idx - 1]
                         diff = time - prev_time
                         if diff > 0 and diff > 0.9*(algo_event_intervals[index] * 1000000000):
+                            start_runnable_time = min(start_runnable_time, time)
                             #print("\t\t\t{} and prev gap: {}, cur_stamp: {}, prev_stamp: {}".format(idx, diff, time, prev_time))
                             cur_interval_diff_ms = (diff - algo_event_intervals[index]*1000000000) / 1000000
                             max_interval_ms = max(max_interval_ms, cur_interval_diff_ms)
@@ -94,7 +100,7 @@ class ArchitectExplorer(AeWrapper):
                 metrics[core_key][ArchitectExplorer.MAX_INTERVAL_DIFF_METRIC_NAME] += [max_interval_ms]
         #print("metrics: {}".format(metrics))
 
-        return metrics
+        return metrics, start_runnable_time
 
     def parse_idle_per_core(self, core_path):
         cpu_state = {
@@ -140,6 +146,15 @@ class ArchitectExplorer(AeWrapper):
 
         return metrics
 
+    def parse_cpu_stats(self, cpu_cluster_path, task_first_start_time = 113070574):
+        trace_file = glob.glob(cpu_cluster_path + "/*nucleus.trace")[0]
+        assert trace_file is not None and trace_file != ""
+        importer = TraceDataImporter(trace_file, None, "output", TracePacketReader.Endianess.Little, TracePacketReader.Type.Binary, False, False, "toolchain", 700.0, task_first_start_time)
+        importer.parse_trace_file()
+        specs = importer.get_cpu_stats()
+        print("specs: {}".format(specs))
+        return specs
+
     def translate_result(self, output_path):
         """
 
@@ -153,42 +168,56 @@ class ArchitectExplorer(AeWrapper):
         # use parse output here
         metrics = {}
         cpu_clusters = [ f.path for f in os.scandir(output_path) if f.is_dir() ]
+        cpu_metrics_per_cluster = {
+            ArchitectExplorer.CPU_TASK_MAX_UTILIZATION_METRIC_NAME: [],
+            ArchitectExplorer.CPU_IDLE_PERCENTAGE_METRIC_NAME: []
+        }
 
         for cpu_cluster in cpu_clusters:
             cores_dir = os.path.join(cpu_cluster, "system_analyzer")
             #print("cores_dir: {}".format(cores_dir))
             core_folders = [ f.path for f in os.scandir(cores_dir) if f.is_dir() ]
             #print("core_folders: {}".format(core_folders))
+            task_first_start_time = sys.maxsize
             for core_folder in core_folders:
                 #print("Processing core_folder: {}".format(core_folder))
                 #metrics = metrics | parse_function_activity_per_core(core_folder, algo_names, algo_event_intervals)
                 #metrics = metrics | parse_idle_per_core(core_folder)
-                metrics1 = self.parse_function_activity_per_core(core_folder, self.algo_names, self.algo_event_intervals)
+                metrics1, task_first_start_time1 = self.parse_function_activity_per_core(core_folder, self.algo_names, self.algo_event_intervals)
+                task_first_start_time = min(task_first_start_time, task_first_start_time1)
                 metrics = {x: {**metrics.get(x, {}), **metrics1.get(x, {})}
                         for x in set(metrics).union(metrics1)}
-                metrics1 = self.parse_idle_per_core(core_folder)
-                metrics = {x: {**metrics.get(x, {}), **metrics1.get(x, {})}
-                        for x in set(metrics).union(metrics1)}
-            #parse_function_activity_per_core(core_folders[1], algo_names)
-            #parse_idle_per_core(core_folders[1])
+                #metrics1 = self.parse_idle_per_core(core_folder)
+                #metrics = {x: {**metrics.get(x, {}), **metrics1.get(x, {})}
+                #        for x in set(metrics).union(metrics1)}
+            cpu_metrics_per_cluster1 = self.parse_cpu_stats(cpu_cluster, task_first_start_time)
+            #cpu_metrics_per_cluster[ArchitectExplorer.CPU_TASK_MAX_UTILIZATION_METRIC_NAME].append(cpu_metrics_per_cluster1.get(ArchitectExplorer.CPU_TASK_MAX_UTILIZATION_METRIC_NAME, 0))
+            #cpu_metrics_per_cluster[ArchitectExplorer.CPU_IDLE_PERCENTAGE_METRIC_NAME].append(cpu_metrics_per_cluster1.get(ArchitectExplorer.CPU_IDLE_PERCENTAGE_METRIC_NAME, 0))
+            if ArchitectExplorer.CPU_TASK_MAX_UTILIZATION_METRIC_NAME in cpu_metrics_per_cluster1:
+                cpu_metrics_per_cluster[ArchitectExplorer.CPU_TASK_MAX_UTILIZATION_METRIC_NAME].append(cpu_metrics_per_cluster1[ArchitectExplorer.CPU_TASK_MAX_UTILIZATION_METRIC_NAME])
+            if ArchitectExplorer.CPU_IDLE_PERCENTAGE_METRIC_NAME in cpu_metrics_per_cluster1:
+                cpu_metrics_per_cluster[ArchitectExplorer.CPU_IDLE_PERCENTAGE_METRIC_NAME].append(cpu_metrics_per_cluster1[ArchitectExplorer.CPU_IDLE_PERCENTAGE_METRIC_NAME])
 
-        #print("final metrics before merging: {}".format(metrics))
 
         specs = {
             ArchitectExplorer.MEAN_INTERVAL_DIFF_METRIC_NAME: [],
             ArchitectExplorer.MAX_INTERVAL_DIFF_METRIC_NAME: [],
             ArchitectExplorer.CPU_IDLE_PERCENTAGE_METRIC_NAME: [],
-            ArchitectExplorer.CPU_IDLE_PERCENTAGE_MIN_DIFF_METRIC_NAME: 0.0
+            ArchitectExplorer.CPU_IDLE_PERCENTAGE_MIN_DIFF_METRIC_NAME: 0.0,
+            ArchitectExplorer.CPU_TASK_MAX_UTILIZATION_METRIC_NAME: []
         }
         for key, value in metrics.items():
             specs[ArchitectExplorer.MEAN_INTERVAL_DIFF_METRIC_NAME] += value[ArchitectExplorer.MEAN_INTERVAL_DIFF_METRIC_NAME]
             specs[ArchitectExplorer.MAX_INTERVAL_DIFF_METRIC_NAME] += value[ArchitectExplorer.MAX_INTERVAL_DIFF_METRIC_NAME]
-            specs[ArchitectExplorer.CPU_IDLE_PERCENTAGE_METRIC_NAME].append(value['idle_percentage'])
+
+        for key, value in cpu_metrics_per_cluster.items():
+            specs[key] += value
 
         specs[ArchitectExplorer.MEAN_INTERVAL_DIFF_METRIC_NAME] = np.mean(specs[ArchitectExplorer.MEAN_INTERVAL_DIFF_METRIC_NAME])
         specs[ArchitectExplorer.MAX_INTERVAL_DIFF_METRIC_NAME] = np.max(specs[ArchitectExplorer.MAX_INTERVAL_DIFF_METRIC_NAME])
         specs[ArchitectExplorer.MAX_INTERVAL_DIFF_METRIC_NAME] = specs[ArchitectExplorer.MAX_INTERVAL_DIFF_METRIC_NAME] - specs[ArchitectExplorer.MEAN_INTERVAL_DIFF_METRIC_NAME]
         specs[ArchitectExplorer.CPU_IDLE_PERCENTAGE_METRIC_NAME] = np.mean(specs[ArchitectExplorer.CPU_IDLE_PERCENTAGE_METRIC_NAME])
+        specs[ArchitectExplorer.CPU_TASK_MAX_UTILIZATION_METRIC_NAME] = np.max(specs[ArchitectExplorer.CPU_TASK_MAX_UTILIZATION_METRIC_NAME])
         print("final specs: {}".format(specs))
         end_time = time.time()
         print("Translation took {} seconds".format(end_time - start_time))

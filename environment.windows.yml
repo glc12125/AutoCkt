@@ -114,4 +114,5 @@ dependencies:
     - wcwidth==0.1.7
     - zipp==0.6.0
     - pandas
+    - PyByteBuffer==1.0.5
 

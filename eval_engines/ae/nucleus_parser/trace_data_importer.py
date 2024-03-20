@@ -178,7 +178,7 @@ class TraceDataImporter:
         self.observation_interval = 10 # default observation interval in msecs
         self.active_cpu_states = {}
         self.active_cpu_idle_durations = {}
-        self.start_cpu_stats_index = -1
+        self.start_cpu_stats_indexes = {}
         self.start_cpu_stats_time = start_cpu_stats_time
         self.enable_test = False
 
@@ -323,8 +323,6 @@ class TraceDataImporter:
                     cpu_state_inst = self.active_cpu_states.get(cpu_id, None)
                     event_id = packet.event_id
                     if event_id in [16, 17]:
-                        if self.start_cpu_stats_index == -1 and packet.timeStamp >= self.start_cpu_stats_time:
-                            self.start_cpu_stats_index = index
                         events_result.append("{},{},{},{}".format(packet.timeStamp, packet.markerType, packet.event_id, packet.cpuID))
                         if self.enable_test:
                             if events_result[index] == lines[index].strip():
@@ -385,6 +383,11 @@ class TraceDataImporter:
                             busy_percentage = (time_interval - cpu_util_inst.idle_time / 1000000) / time_interval
                             if busy_percentage >= 0 and busy_percentage <= 1:
                                 busy_percentages = self.active_cpu_busy_percentage.get(cpu_id, None)
+                                if cpu_id not in self.start_cpu_stats_indexes:
+                                    self.start_cpu_stats_indexes.update({cpu_id: -1})
+                                if self.start_cpu_stats_indexes[cpu_id] == -1 and packet.timeStamp >= self.start_cpu_stats_time:
+                                    print("setting start_cpu_stats_index: {}".format(len(self.active_cpu_busy_percentage[cpu_id])))
+                                    self.start_cpu_stats_indexes[cpu_id] = len(self.active_cpu_busy_percentage[cpu_id])
                                 if busy_percentages is None:
                                     busy_percentages = []
                                     busy_percentages.append(busy_percentage)
@@ -530,11 +533,13 @@ class TraceDataImporter:
             CPU_TASK_MAX_UTILIZATION_METRIC_NAME: []
         }
 
-        print("self.start_cpu_stats_index: {}".format(self.start_cpu_stats_index))
+        print("self.start_cpu_stats_indexes:")
+        for k, v in self.start_cpu_stats_indexes.items():
+            print("CPU " + str(k) + "'s stats index: " + str(v))
         # Calculate CPU utilization metrics
         for cpu_id, percentages in self.active_cpu_busy_percentage.items():
             for idx, percentage in enumerate(percentages):
-                if idx < self.start_cpu_stats_index:
+                if idx < self.start_cpu_stats_indexes[cpu_id]:
                     continue
                 specs[CPU_TASK_MAX_UTILIZATION_METRIC_NAME].append(percentage)
         # Calculate CPU states metrics
@@ -546,8 +551,16 @@ class TraceDataImporter:
 
         #outliers = self.get_outliers(specs[CPU_MAX_UTILIZATION_METRIC_NAME], q1_ratio=15, q2_ratio=75, threshold_ratio=1.5)
         #print("Outliers1 of array is : \n", outliers)
-        specs[CPU_TASK_MAX_UTILIZATION_METRIC_NAME] = np.max(specs[CPU_TASK_MAX_UTILIZATION_METRIC_NAME])
-        specs[CPU_IDLE_PERCENTAGE_METRIC_NAME] = np.mean(specs[CPU_IDLE_PERCENTAGE_METRIC_NAME])
+        #specs[CPU_TASK_MAX_UTILIZATION_METRIC_NAME] = np.max(specs[CPU_TASK_MAX_UTILIZATION_METRIC_NAME])
+        #specs[CPU_IDLE_PERCENTAGE_METRIC_NAME] = np.mean(specs[CPU_IDLE_PERCENTAGE_METRIC_NAME])
+        if len(specs[CPU_TASK_MAX_UTILIZATION_METRIC_NAME]) > 0:
+            specs[CPU_TASK_MAX_UTILIZATION_METRIC_NAME] = np.max(specs[CPU_TASK_MAX_UTILIZATION_METRIC_NAME])
+        else:
+            del specs[CPU_TASK_MAX_UTILIZATION_METRIC_NAME]
+        if len(specs[CPU_IDLE_PERCENTAGE_METRIC_NAME]) > 0:
+            specs[CPU_IDLE_PERCENTAGE_METRIC_NAME] = np.mean(specs[CPU_IDLE_PERCENTAGE_METRIC_NAME])
+        else:
+            del specs[CPU_IDLE_PERCENTAGE_METRIC_NAME]
         
         return specs
 
