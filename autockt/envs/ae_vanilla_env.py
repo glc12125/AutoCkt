@@ -181,7 +181,7 @@ class ArchitectExplorerEnv(gym.Env):
         print("Resetting, using {}th spec, initialize specs_dieal to {}, specs_ideal_norm to {}, global_g: {}".format(idx, self.specs_ideal, self.specs_ideal_norm, self.global_g))
         #initialize current parameters
         #self.cur_params_idx = np.array([33, 33, 33, 33, 33, 14, 20])
-        self.cur_params_idx = np.array([1, 1, 11, 1])
+        self.cur_params_idx = np.array([1, 1, 8, 1])
         self.cur_specs = self.update(self.cur_params_idx)
         cur_spec_norm = self.lookup(self.cur_specs, self.global_g)
         reward = self.reward(self.cur_specs, self.specs_ideal)
