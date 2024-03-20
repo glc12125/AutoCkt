@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
-import json
+import sys
 import os
 import numpy as np
 import os
@@ -9,12 +9,16 @@ import glob
 import time
 from collections import deque
 
+from eval_engines.ae.nucleus_parser.trace_data_importer import TraceDataImporter
+from eval_engines.ae.nucleus_parser.trace_packet_reader import TracePacketReader
+
 FUNCTION_ENTRY_VALUE = "ust.function.entry"
 FUNCTION_EXIT_VALUE = "ust.function.exit"
 
 MEAN_INTERVAL_DIFF_METRIC_NAME = "mean_interval_deviation"
 MAX_INTERVAL_DIFF_METRIC_NAME = "max_interval_deviation"
 CPU_IDLE_PERCENTAGE_METRIC_NAME = "idle_percentage"
+CPU_TASK_MAX_UTILIZATION_METRIC_NAME = "cpu_task_max_utilization"
 
 def process_function_event(event_time, function_type, this_fn, call_site, cpu_state):
     #print("calling process_function_event event_time: {}, function_type: {}, this_fn: {}, call_site: {}".format(event_time, function_type, this_fn, call_site))
@@ -31,6 +35,7 @@ def process_function_event(event_time, function_type, this_fn, call_site, cpu_st
         cpu_state['last_exit_time'] = int(event_time)
 
 def parse_function_activity_per_core(core_path, algo_names, algo_event_intervals):
+    start_runnable_time = sys.maxsize
     activity_file = glob.glob(core_path + "/function_activity0.csv")[0]
     print("\tProcessing activity file: {}".format(activity_file))
     algo_timestamp_mapping = {}
@@ -77,6 +82,7 @@ def parse_function_activity_per_core(core_path, algo_names, algo_event_intervals
                     prev_time = algo_timestamp_mapping[algo_name][idx - 1]
                     diff = time - prev_time
                     if diff > 0 and diff > 0.9*(algo_event_intervals[index] * 1000000000):
+                        start_runnable_time = min(start_runnable_time, prev_time)
                         print("\t\t\t{} and prev gap: {}, cur_stamp: {}, prev_stamp: {}".format(idx, diff, time, prev_time))
                         cur_interval_diff_ms = (diff - algo_event_intervals[index]*1000000000) / 1000000
                         max_interval_ms = max(max_interval_ms, cur_interval_diff_ms)
@@ -86,7 +92,7 @@ def parse_function_activity_per_core(core_path, algo_names, algo_event_intervals
             metrics[core_key][MAX_INTERVAL_DIFF_METRIC_NAME] += [max_interval_ms]
     print("metrics: {}".format(metrics))
 
-    return metrics
+    return metrics, start_runnable_time
 
 def parse_idle_per_core(core_path):
     cpu_state = {
@@ -130,8 +136,18 @@ def parse_idle_per_core(core_path):
     metrics[cpu_key]["busy_percentage"] = cpu_state['busy_time']/cpu_state['simulation_time']
     metrics[cpu_key]["system_percentage"] = system_time/cpu_state['simulation_time']
     
+    print(metrics)
+
     return metrics
             
+def parse_cpu_stats(cpu_cluster_path, task_first_start_time = 113070574):
+    trace_file = glob.glob(cpu_cluster_path + "/*nucleus.trace")[0]
+    assert trace_file is not None and trace_file != ""
+    importer = TraceDataImporter(trace_file, None, "output", TracePacketReader.Endianess.Little, TracePacketReader.Type.Binary, False, False, "toolchain", 700.0, task_first_start_time)
+    importer.parse_trace_file()
+    specs = importer.get_cpu_stats()
+    print("specs: {}".format(specs))
+    return specs
 
 EXAMPLE_USAGE = """
 Example Usage via RLlib CLI:
@@ -152,81 +168,56 @@ def create_parser(parser_creator=None):
         epilog=EXAMPLE_USAGE)
     parser.add_argument(
         "simdir", type=str, help="path to the generated sim_dir.")
-    #required_named = parser.add_argument_group("required named arguments")
-    #required_named.add_argument(
-    #    "--run",
-    #    type=str,
-    #    required=True,
-    #    help="The algorithm or model to train. This may refer to the name "
-    #    "of a built-on algorithm (e.g. RLLib's DQN or PPO), or a "
-    #    "user-defined trainable function or class registered in the "
-    #    "tune registry.")
-    #required_named.add_argument(
-    #    "--env", type=str, help="The gym environment to use.")
-    #parser.add_argument(
-    #    "--no-render",
-    #    default=False,
-    #    action="store_const",
-    #    const=True,
-    #    help="Surpress rendering of the environment.")
-    #parser.add_argument(
-    #    "--steps", default=10000, help="Number of steps to roll out.")
-    #parser.add_argument("--out", default=None, help="Output filename.")
-    #parser.add_argument(
-    #    "--config",
-    #    default="{}",
-    #    type=json.loads,
-    #    help="Algorithm-specific configuration (e.g. env, hyperparams). "
-    #    "Surpresses loading of configuration from checkpoint.")
-    #parser.add_argument(
-    #    "--num_val_specs",
-    #    type=int,
-    #    default=50,
-    #    help="Number of untrained objectives to test on")
-    #parser.add_argument(
-    #    "--traj_len",
-    #    type=int,
-    #    default=60,
-    #    help="Length of each trajectory")
+
     return parser
 
 def translate_result(sim_dir, algo_names, algo_event_intervals):
     metrics = {}
     cpu_clusters = [ f.path for f in os.scandir(sim_dir) if f.is_dir() ]
-
+    cpu_metrics_per_cluster = {
+        CPU_TASK_MAX_UTILIZATION_METRIC_NAME: [],
+        CPU_IDLE_PERCENTAGE_METRIC_NAME: []
+    }
     for cpu_cluster in cpu_clusters:
         cores_dir = os.path.join(cpu_cluster, "system_analyzer")
         #print("cores_dir: {}".format(cores_dir))
         core_folders = [ f.path for f in os.scandir(cores_dir) if f.is_dir() ]
         #print("core_folders: {}".format(core_folders))
+        task_first_start_time = sys.maxsize
         for core_folder in core_folders:
             #print("Processing core_folder: {}".format(core_folder))
             #metrics = metrics | parse_function_activity_per_core(core_folder, algo_names, algo_event_intervals)
             #metrics = metrics | parse_idle_per_core(core_folder)
-            metrics1 = parse_function_activity_per_core(core_folder, algo_names, algo_event_intervals)
+            metrics1,task_first_start_time1  = parse_function_activity_per_core(core_folder, algo_names, algo_event_intervals)
+            task_first_start_time = min(task_first_start_time, task_first_start_time1)
             metrics = {x: {**metrics.get(x, {}), **metrics1.get(x, {})}
                     for x in set(metrics).union(metrics1)}
-            metrics1 = parse_idle_per_core(core_folder)
-            metrics = {x: {**metrics.get(x, {}), **metrics1.get(x, {})}
-                    for x in set(metrics).union(metrics1)}
-        #parse_function_activity_per_core(core_folders[1], algo_names)
-        #parse_idle_per_core(core_folders[1])
+            #metrics1 = parse_idle_per_core(core_folder)
+            #metrics = {x: {**metrics.get(x, {}), **metrics1.get(x, {})}
+            #        for x in set(metrics).union(metrics1)}
+        cpu_metrics_per_cluster1 = parse_cpu_stats(cpu_cluster, task_first_start_time)
+        cpu_metrics_per_cluster[CPU_TASK_MAX_UTILIZATION_METRIC_NAME].append(cpu_metrics_per_cluster1.get(CPU_TASK_MAX_UTILIZATION_METRIC_NAME, 0))
+        cpu_metrics_per_cluster[CPU_IDLE_PERCENTAGE_METRIC_NAME].append(cpu_metrics_per_cluster1.get(CPU_IDLE_PERCENTAGE_METRIC_NAME, 0))
 
-    #print("final metrics before merging: {}".format(metrics))
 
     specs = {
         MEAN_INTERVAL_DIFF_METRIC_NAME: [],
         MAX_INTERVAL_DIFF_METRIC_NAME: [],
-        CPU_IDLE_PERCENTAGE_METRIC_NAME: []
+        CPU_IDLE_PERCENTAGE_METRIC_NAME: [],
+        CPU_TASK_MAX_UTILIZATION_METRIC_NAME: []
     }
     for key, value in metrics.items():
         specs[MEAN_INTERVAL_DIFF_METRIC_NAME] += value[MEAN_INTERVAL_DIFF_METRIC_NAME]
         specs[MAX_INTERVAL_DIFF_METRIC_NAME] += value[MAX_INTERVAL_DIFF_METRIC_NAME]
-        specs[CPU_IDLE_PERCENTAGE_METRIC_NAME].append(value['idle_percentage'])
+    
+    
+    for key, value in cpu_metrics_per_cluster.items():
+        specs[key] += value
 
     specs[MEAN_INTERVAL_DIFF_METRIC_NAME] = np.mean(specs[MEAN_INTERVAL_DIFF_METRIC_NAME])
     specs[MAX_INTERVAL_DIFF_METRIC_NAME] = np.max(specs[MAX_INTERVAL_DIFF_METRIC_NAME])
     specs[CPU_IDLE_PERCENTAGE_METRIC_NAME] = np.mean(specs[CPU_IDLE_PERCENTAGE_METRIC_NAME])
+    specs[CPU_TASK_MAX_UTILIZATION_METRIC_NAME] = np.max(specs[CPU_TASK_MAX_UTILIZATION_METRIC_NAME])
     print("final specs: {}".format(specs))
 
     return specs

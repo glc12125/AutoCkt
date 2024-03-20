@@ -1,0 +1,1 @@
+python3 analysis.py ./data/simple_10000_load_sim_dir/sim_dir

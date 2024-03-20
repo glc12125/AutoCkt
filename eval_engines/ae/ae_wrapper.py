@@ -67,7 +67,6 @@ class AeWrapper(object):
         return fname
 
     def create_design(self, state, new_fname):
-        #design_folder = os.path.join(self.gen_dir, new_fname)+ "_" + str(random.randint(0,10000))
         existing_files = os.listdir(self.gen_dir)
         latest_index = 0
         for file in existing_files:
