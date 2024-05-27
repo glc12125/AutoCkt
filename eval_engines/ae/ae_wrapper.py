@@ -235,7 +235,7 @@ class AeWrapper(object):
         print("Starting AE Engine")
         start_time = time.time()
         #workding_directory = "C:\\development\\AE\\Architecture_Explorer\\AutoCkt\\ae_data\\designs_SimpleExample\\SimpleExample_1_4_200000000_1_5364\\ae_run\\WD"
-        ae_engine_output = check_output("C:\\siemens\\SystemExplorer\\Automation_Engine\\AE_Engine.exe all --working_dir %s --root_dir C:\\siemens\\SystemExplorer --xml_file %s --xsd_schema C:\\siemens\\SystemExplorer\\config\\VSE_XSD_Schema\\S2S_VSE_XSD_schema.xsd --vista C:\\siemens\\VirtualPlatform --nucleus C:\\siemens" % (workding_directory_path, fpath))
+        ae_engine_output = check_output("C:\\siemens\\SystemExplorer\\Automation_Engine\\AE_Engine.exe all --working_dir %s --root_dir C:\\siemens\\SystemExplorer --xml_file %s --xsd_schema C:\\siemens\\SystemExplorer\\config\\XSD_Schema\\AE_XSD_schema.xsd --vista C:\\siemens\\VirtualPlatform --nucleus C:\\siemens" % (workding_directory_path, fpath))
         end_time = time.time()
         print("Done")
         print("AE_Engine took {} seconds.".format(end_time - start_time))

@@ -1,0 +1,3 @@
+conda activate autoae
+set TUNE_DISABLE_AUTO_CALLBACK_SYNCER=1
+python autockt/train_ae_ray.py
